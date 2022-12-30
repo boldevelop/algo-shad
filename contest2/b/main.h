@@ -4,7 +4,7 @@
 #include <vector>
 
 struct Player {
-    int n;
+    int pos;
     int eff;
 };
 
@@ -30,13 +30,7 @@ Result FormFootballCommand(const std::vector<Player>& players) {
     auto fast_it = sorted_players.begin();
     int64_t total_eff = 0;
 
-    while (true) {
-        if (fast_it == sorted_players.end()) {
-            commands.emplace_back() = {total_eff, lazy_it, fast_it};
-            total_eff = 0;
-            break;
-        }
-
+    while (fast_it != sorted_players.end()) {
         if (fast_it - lazy_it < 2) {
             total_eff += fast_it->eff;
             fast_it++;
@@ -53,6 +47,9 @@ Result FormFootballCommand(const std::vector<Player>& players) {
         ++fast_it;
     }
 
+    commands.emplace_back() = {total_eff, lazy_it, fast_it};
+    total_eff = 0;
+
     std::sort(commands.begin(), commands.end(), [](const Command& lhs, const Command& rhs) {
         return lhs.eff > rhs.eff;
     });
@@ -61,7 +58,7 @@ Result FormFootballCommand(const std::vector<Player>& players) {
 
     auto beg = commands[0].begin;
     while (beg < commands[0].end) {
-        res.push_back(beg->n);
+        res.push_back(beg->pos);
         ++beg;
     }
 
