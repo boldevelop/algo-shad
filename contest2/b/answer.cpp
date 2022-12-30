@@ -1,7 +1,6 @@
-#pragma once
-
 #include <algorithm>
 #include <vector>
+#include <iostream>
 
 struct Player {
     int n;
@@ -21,9 +20,8 @@ struct Result {
 
 Result FormFootballCommand(const std::vector<Player>& players) {
     auto sorted_players = players;
-    std::sort(sorted_players.begin(), sorted_players.end(), [](const Player& lhs, const Player& rhs) {
-        return lhs.eff > rhs.eff;
-    });
+    std::sort(sorted_players.begin(), sorted_players.end(),
+              [](const Player& lhs, const Player& rhs) { return lhs.eff > rhs.eff; });
     std::vector<Command> commands;
 
     auto lazy_it = sorted_players.begin();
@@ -53,9 +51,8 @@ Result FormFootballCommand(const std::vector<Player>& players) {
         ++fast_it;
     }
 
-    std::sort(commands.begin(), commands.end(), [](const Command& lhs, const Command& rhs) {
-        return lhs.eff > rhs.eff;
-    });
+    std::sort(commands.begin(), commands.end(),
+              [](const Command& lhs, const Command& rhs) { return lhs.eff > rhs.eff; });
 
     std::vector<int> res;
 
@@ -68,4 +65,25 @@ Result FormFootballCommand(const std::vector<Player>& players) {
     std::sort(res.begin(), res.end());
 
     return {commands[0].eff, res};
+}
+
+int main() {
+    std::cin.tie(nullptr);
+    std::ios_base::sync_with_stdio(false);
+    int n_size;
+    std::vector<Player> players;
+    std::cin >> n_size;
+
+    for (int i = 0; i < n_size; ++i) {
+        int eff;
+        std::cin >> eff;
+        players.push_back({i + 1, eff});
+    }
+
+    auto res = FormFootballCommand(players);
+    std::cout << res.eff << '\n';
+    for (auto pos : res.players) {
+        std::cout << pos << " ";
+    }
+    std::cout << '\n';
 }

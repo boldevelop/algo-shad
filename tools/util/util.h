@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <numeric>
 #include <filesystem>
+#include <chrono>
 
 class RandomGenerator {
 public:
@@ -74,3 +75,23 @@ inline std::filesystem::path GetFileDir(std::string file) {
         throw std::runtime_error{"Bad file name"};
     }
 }
+
+class Log {
+    std::chrono::high_resolution_clock clock_;
+    std::chrono::system_clock::time_point begin_time_;
+
+public:
+    Log() {
+        begin_time_ = clock_.now();
+    }
+    int64_t GetDuration() {
+        using std::chrono::duration;
+        using std::chrono::duration_cast;
+        using std::chrono::high_resolution_clock;
+        using std::chrono::milliseconds;
+
+        auto end_time = clock_.now();
+        auto ms_int = duration_cast<milliseconds>(end_time - begin_time_);
+        return ms_int.count();
+    }
+};
