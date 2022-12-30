@@ -1,12 +1,12 @@
 #include <catch.hpp>
 #include <util.h>
-#include <main.h>
+#include <main.hpp>
 #include <vector>
 #include <iostream>
 
 const int MAX_N = 100'000;
 
-std::vector<Player> GeneratePlayers(const std::vector<int>& efficiencies) {
+std::vector<Player> GeneratePlayers(const std::vector<int64_t>& efficiencies) {
     std::vector<Player> res;
     int n = 1;
     for (auto eff : efficiencies) {
@@ -37,10 +37,10 @@ TEST_CASE("Пример 2") {
 }
 
 TEST_CASE("Пример 3") {
-    std::vector<int> efficiencies = {35, 20, 20};
-    std::vector<int> expected;
+    std::vector<int64_t> efficiencies = {35, 20, 20};
+    std::vector<int> expected = {2, 3};
+    int64_t total_eff = 40;
 
-    int64_t total_eff = 0;
     auto start = efficiencies.size();
     for (int i = 1; i < 9; ++i) {
         expected.push_back(start + i);
@@ -59,11 +59,31 @@ TEST_CASE("Пример 3") {
     REQUIRE(expected == res.players);
 }
 
+TEST_CASE("Пример 4") {
+    std::vector<int64_t> efficiencies = {50, 20};
+    std::vector<int> expected = {2};
+
+    int64_t total_eff = 20;
+    auto start = efficiencies.size();
+    for (int i = 1; i < 7; ++i) {
+        expected.push_back(start + i);
+        auto eff = 10;
+        efficiencies.push_back(eff);
+        total_eff += eff;
+    }
+
+    std::vector<Player> players = GeneratePlayers(efficiencies);
+    auto res = FormFootballCommand(players);
+
+    REQUIRE(total_eff == res.eff);
+    REQUIRE(expected == res.players);
+}
+
 TEST_CASE("Крайние случаи") {
     auto eff = 10;
 
     SECTION("Один элемент") {
-        std::vector<int> efficiencies = {eff};
+        std::vector<int64_t> efficiencies = {eff};
         std::vector<int> expected = {1};
         std::vector<Player> players = GeneratePlayers(efficiencies);
         auto res = FormFootballCommand(players);
@@ -75,7 +95,7 @@ TEST_CASE("Крайние случаи") {
         std::vector<int> expected = {1, 2};
 
         {
-            std::vector<int> efficiencies = {eff, eff};
+            std::vector<int64_t> efficiencies = {eff, eff};
             std::vector<Player> players = GeneratePlayers(efficiencies);
             auto res = FormFootballCommand(players);
             REQUIRE(std::reduce(efficiencies.begin(), efficiencies.end()) == res.eff);
@@ -83,7 +103,7 @@ TEST_CASE("Крайние случаи") {
         }
 
         {
-            std::vector<int> efficiencies = {eff, eff * 3};
+            std::vector<int64_t> efficiencies = {eff, eff * 3};
             std::vector<Player> players = GeneratePlayers(efficiencies);
             auto res = FormFootballCommand(players);
             REQUIRE(std::reduce(efficiencies.begin(), efficiencies.end()) == res.eff);
@@ -95,7 +115,7 @@ TEST_CASE("Крайние случаи") {
 
         {
             std::vector<int> expected = {1, 2, 3};
-            std::vector<int> efficiencies = {eff / 2, eff, eff / 2 + eff};
+            std::vector<int64_t> efficiencies = {eff / 2, eff, eff / 2 + eff};
             std::vector<Player> players = GeneratePlayers(efficiencies);
             auto res = FormFootballCommand(players);
             REQUIRE(std::reduce(efficiencies.begin(), efficiencies.end()) == res.eff);
@@ -104,7 +124,7 @@ TEST_CASE("Крайние случаи") {
 
         {
             std::vector<int> expected = {1, 2, 3};
-            std::vector<int> efficiencies = {eff, eff, eff * 2};
+            std::vector<int64_t> efficiencies = {eff, eff, eff * 2};
             std::vector<Player> players = GeneratePlayers(efficiencies);
             auto res = FormFootballCommand(players);
             REQUIRE(std::reduce(efficiencies.begin(), efficiencies.end()) == res.eff);
@@ -113,7 +133,7 @@ TEST_CASE("Крайние случаи") {
 
         {
             std::vector<int> expected = {2, 3};
-            std::vector<int> efficiencies = {eff / 2, eff, eff * 2};
+            std::vector<int64_t> efficiencies = {eff / 2, eff, eff * 2};
             std::vector<Player> players = GeneratePlayers(efficiencies);
             auto res = FormFootballCommand(players);
             REQUIRE(std::reduce(efficiencies.begin() + 1, efficiencies.end()) == res.eff);
@@ -122,7 +142,7 @@ TEST_CASE("Крайние случаи") {
 
         {
             std::vector<int> expected = {1, 3};
-            std::vector<int> efficiencies = {eff, eff / 2, eff * 2};
+            std::vector<int64_t> efficiencies = {eff, eff / 2, eff * 2};
             std::vector<Player> players = GeneratePlayers(efficiencies);
             auto res = FormFootballCommand(players);
             REQUIRE(eff * 3 == res.eff);
@@ -132,7 +152,7 @@ TEST_CASE("Крайние случаи") {
 }
 
 TEST_CASE("Стресс 1") {
-    std::vector<int> efficiencies;
+    std::vector<int64_t> efficiencies;
     std::vector<int> expected;
 
     for (int i = 1; i <= MAX_N; ++i) {
@@ -154,4 +174,22 @@ TEST_CASE("Стресс 1") {
 
     REQUIRE(expected == res.players);
     REQUIRE(total_eff == res.eff);
+}
+
+TEST_CASE("Стресс 2") {
+    std::vector<int64_t> efficiencies;
+    std::vector<int> expected;
+
+    for (int i = 1; i <= MAX_N; ++i) {
+        efficiencies.push_back(4'294'967'295ll); // 2^31 - 1
+        expected.push_back(i);
+    }
+
+    std::vector<Player> players = GeneratePlayers(efficiencies);
+    Log log;
+    auto res = FormFootballCommand(players);
+    std::cout << "Стресс 2: " << log.GetDuration() << std::endl;
+
+    REQUIRE(std::reduce(efficiencies.begin(), efficiencies.end()) == res.eff);
+    REQUIRE(expected == res.players);
 }

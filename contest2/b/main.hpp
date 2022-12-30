@@ -5,7 +5,7 @@
 
 struct Player {
     int pos;
-    int eff;
+    int64_t eff;
 };
 
 struct Command {
@@ -21,9 +21,8 @@ struct Result {
 
 Result FormFootballCommand(const std::vector<Player>& players) {
     auto sorted_players = players;
-    std::sort(sorted_players.begin(), sorted_players.end(), [](const Player& lhs, const Player& rhs) {
-        return lhs.eff > rhs.eff;
-    });
+    std::sort(sorted_players.begin(), sorted_players.end(),
+              [](const Player& lhs, const Player& rhs) { return lhs.eff > rhs.eff; });
     std::vector<Command> commands;
 
     auto lazy_it = sorted_players.begin();
@@ -40,19 +39,19 @@ Result FormFootballCommand(const std::vector<Player>& players) {
         auto prev = fast_it - 1;
         if (fast_it->eff + prev->eff < lazy_it->eff) {
             commands.emplace_back() = {total_eff, lazy_it, fast_it};
-            total_eff = 0;
-            lazy_it = fast_it;
+            total_eff -= lazy_it->eff;
+            ++lazy_it;
+        } else {
+            total_eff += fast_it->eff;
+            ++fast_it;
         }
-        total_eff += fast_it->eff;
-        ++fast_it;
     }
 
     commands.emplace_back() = {total_eff, lazy_it, fast_it};
     total_eff = 0;
 
-    std::sort(commands.begin(), commands.end(), [](const Command& lhs, const Command& rhs) {
-        return lhs.eff > rhs.eff;
-    });
+    std::sort(commands.begin(), commands.end(),
+              [](const Command& lhs, const Command& rhs) { return lhs.eff > rhs.eff; });
 
     std::vector<int> res;
 

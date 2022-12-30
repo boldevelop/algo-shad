@@ -4,7 +4,7 @@
 
 struct Player {
     int pos;
-    int eff;
+    int64_t eff;
 };
 
 struct Command {
@@ -38,11 +38,12 @@ Result FormFootballCommand(const std::vector<Player>& players) {
         auto prev = fast_it - 1;
         if (fast_it->eff + prev->eff < lazy_it->eff) {
             commands.emplace_back() = {total_eff, lazy_it, fast_it};
-            total_eff = 0;
-            lazy_it = fast_it;
+            total_eff -= lazy_it->eff;
+            ++lazy_it;
+        } else {
+            total_eff += fast_it->eff;
+            ++fast_it;
         }
-        total_eff += fast_it->eff;
-        ++fast_it;
     }
 
     commands.emplace_back() = {total_eff, lazy_it, fast_it};

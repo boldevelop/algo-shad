@@ -1,8 +1,12 @@
 #!/bin/bash
 set -e
 
-path_to_answer=../contest$1/$2/answer.cpp
-echo ${path_to_answer}
+path_to_folder=../contest$1/$2/
+answer=${path_to_folder}answer.cpp
+main=${path_to_folder}main.hpp
 
-clang-format -i ${path_to_answer}
-clang-tidy ${path_to_answer} -- -std=c++17
+echo ${answer}
+echo ${main}
+
+clang-format -i ${answer} ${main}
+clang-tidy ${answer} ${main} -- -std=c++17
