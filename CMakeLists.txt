@@ -22,6 +22,7 @@ endfunction()
 
 add_task(2 b)
 add_task(3 a)
+add_task(3 e)
 
 # set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 # set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
