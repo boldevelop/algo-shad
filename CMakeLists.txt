@@ -21,6 +21,7 @@ function(add_task contest name)
 endfunction()
 
 add_task(2 b)
+add_task(3 a)
 
 # set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 # set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
