@@ -1,5 +1,3 @@
-#pragma once
-
 #include <vector>
 #include <random>
 #include <optional>
@@ -56,7 +54,7 @@ public:
     }
 
     bool Contains(int number) const {
-        if (data_.size() == 0) {
+        if (data_.empty()) {
             return false;
         }
         auto val = data_[hash_(number) % data_.size()];
