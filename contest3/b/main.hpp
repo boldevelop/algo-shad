@@ -53,7 +53,6 @@ private:
 class Tree {
     std::vector<std::vector<int>> data_;
     int size_;
-    std::vector<int> used_;
     std::vector<long double> hashes_;
 
 public:
@@ -67,9 +66,8 @@ public:
 
     std::vector<int> GetCentroids() {
         std::vector<int> centroids;
-        used_.resize(size_);
-        DfsGetCentroids(0, -1, &centroids);
-        used_.clear();
+        std::vector<int> used(size_);
+        DfsGetCentroids(0, -1, used, &centroids);
         return centroids;
     }
 
@@ -78,37 +76,28 @@ public:
             hashes_.resize(size_);
         }
 
-        used_.resize(size_);
-        auto hash = DfsHash(centroid, save_hashes);
+        auto hash = DfsHash(centroid, -1, save_hashes);
 
         if (save_hashes) {
             hashes_[centroid] = hash;
         }
 
-        used_.clear();
         return hash;
     }
 
     long double HashWithMap(int centroid, VertexHashTable* map) {
-        used_.resize(size_);
-        auto hash = DfsHashWithMap(centroid, map);
-
+        auto hash = DfsHashWithMap(centroid, -1, map);
         map->Add(hash, centroid);
-
-        used_.clear();
         return hash;
     }
 
     void Print(int vertex) {
-        used_.resize(size_);
-        DfsPrint(vertex, "");
-        used_.clear();
+        DfsPrint(vertex, -1, "");
     }
 
     bool IsIsomorphicWith(Tree& tree) {
         auto centroids = GetCentroids();
         auto another_centroids = tree.GetCentroids();
-        std::cout << "centroids size: " << centroids.size() << std::endl;
         if (centroids.size() != another_centroids.size()) {
             std::cout << "-1" << std::endl;
             return false;
@@ -119,7 +108,6 @@ public:
         auto is_poly = first_hash == tree.Hash(another_centroids[0], true);
 
         if (is_poly) {
-            std::cout << "H: " << first_hash << " " << tree.Hash(another_centroids[1], true) << std::endl;
             tree.PrintOldKeys(map);
             return true;
         }
@@ -142,20 +130,18 @@ public:
     }
 
 private:
-    long double DfsHash(int vertex, bool save_hashes) {
-        used_[vertex] = 1;
+    long double DfsHash(int vertex, int prev_vert, bool save_hashes) {
         bool is_leaf = true;
 
         std::vector<long double> child_hashes;
         std::vector<int> vertexes;
 
         for (int child_v : data_[vertex]) {
-            if (used_[child_v] != 0) {
-                continue;
+            if (child_v != prev_vert) {
+                is_leaf = false;
+                child_hashes.push_back(std::log(DfsHash(child_v, vertex, save_hashes)));
+                vertexes.push_back(child_v);
             }
-            is_leaf = false;
-            child_hashes.push_back(std::log(DfsHash(child_v, save_hashes)));
-            vertexes.push_back(child_v);
         }
 
         if (is_leaf) {
@@ -178,20 +164,18 @@ private:
         return sum;
     }
 
-    long double DfsHashWithMap(int vertex, VertexHashTable* map) {
-        used_[vertex] = 1;
+    long double DfsHashWithMap(int vertex, int prev_vert, VertexHashTable* map) {
         bool is_leaf = true;
 
         std::vector<long double> child_hashes;
         std::vector<int> vertexes;
 
         for (int child_v : data_[vertex]) {
-            if (used_[child_v] != 0) {
-                continue;
+            if (child_v != prev_vert) {
+                is_leaf = false;
+                child_hashes.push_back(std::log(DfsHashWithMap(child_v, vertex, map)));
+                vertexes.push_back(child_v);
             }
-            is_leaf = false;
-            child_hashes.push_back(std::log(DfsHashWithMap(child_v, map)));
-            vertexes.push_back(child_v);
         }
 
         if (is_leaf) {
@@ -212,61 +196,60 @@ private:
         return sum;
     }
 
-    void DfsGetCentroids(int vert, int prev_vert, std::vector<int>* centroids) {
-        used_[vert] = 1;
+    void DfsGetCentroids(int vertex, int prev_vert, std::vector<int>& used,
+                         std::vector<int>* centroids) {
+        used[vertex] = 1;
         bool is_centroid = true;
 
-        for (auto child_v : data_[vert]) {
+        for (auto child_v : data_[vertex]) {
             if (child_v != prev_vert) {
-                DfsGetCentroids(child_v, vert, centroids);
-                used_[vert] += used_[child_v];
+                DfsGetCentroids(child_v, vertex, used, centroids);
+                used[vertex] += used[child_v];
 
-                if (used_[child_v] > size_ / 2) {
+                if (used[child_v] > size_ / 2) {
                     is_centroid = false;
                 }
             }
         }
 
-        if (size_ - used_[vert] > size_ / 2) {
+        if (size_ - used[vertex] > size_ / 2) {
             is_centroid = false;
         }
 
         if (is_centroid) {
-            centroids->push_back(vert);
+            centroids->push_back(vertex);
         }
     }
 
-    void DfsPrint(int vertex, std::string indent = "") {
-        used_[vertex] = 1;
+    void DfsPrint(int vertex, int prev_vert, std::string indent = "") {
         std::cout << indent << vertex << std::endl;
         for (int child_v : data_[vertex]) {
-            if (used_[child_v] != 0) {
-                continue;
+            if (child_v != prev_vert) {
+                DfsPrint(child_v, vertex, indent + "+- ");
             }
-            DfsPrint(child_v, indent + "+- ");
         }
     }
 };
 
-// int main() {
-//     std::cin.tie(nullptr);
-//     std::ios_base::sync_with_stdio(false);
+int main() {
+    std::cin.tie(nullptr);
+    std::ios_base::sync_with_stdio(false);
 
-//     int size;
-//     int a_src, b_dist;
-//     std::cin >> size;
+    int size;
+    int a_src, b_dist;
+    std::cin >> size;
 
-//     Tree first(size);
-//     for (int i = 1; i < size; ++i) {
-//         std::cin >> a_src >> b_dist;
-//         first.AddEdge(a_src, b_dist);
-//     }
+    Tree first(size);
+    for (int i = 1; i < size; ++i) {
+        std::cin >> a_src >> b_dist;
+        first.AddEdge(a_src, b_dist);
+    }
 
-//     Tree second(size);
-//     for (int i = 1; i < size; ++i) {
-//         std::cin >> a_src >> b_dist;
-//         second.AddEdge(a_src, b_dist);
-//     }
+    Tree second(size);
+    for (int i = 1; i < size; ++i) {
+        std::cin >> a_src >> b_dist;
+        second.AddEdge(a_src, b_dist);
+    }
 
-//     first.IsIsomorphicWith(second);
-// }
+    first.IsIsomorphicWith(second);
+}
