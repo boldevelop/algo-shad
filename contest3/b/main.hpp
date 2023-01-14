@@ -16,7 +16,8 @@ const uint64_t kPrime = 2 * 1'000'000'000 + 11;
 
 class VertexHashTable {
     std::vector<std::list<HashData>> data_;
-    int size_;
+    int size_ = 0;
+    int capacity_ = 0;
 
 public:
     VertexHashTable() : data_(0) {
@@ -24,19 +25,20 @@ public:
 
     void Resize(int need_capacity) {
         if (need_capacity < 5000) {
-            data_.resize(need_capacity);
+            capacity_ = need_capacity > 0 ? need_capacity : 1;
         } else {
-            data_.resize(5000);
+            capacity_ = 5000;
         }
+        data_.resize(capacity_);
     }
 
     void Add(long double key, int vertex) {
-        data_[Hash(key) % 10000].push_back({key, vertex});
+        data_[Hash(key) % capacity_].push_back({key, vertex});
         size_++;
     }
 
     int Remove(long double key) {
-        auto& list = data_[Hash(key) % 10000];
+        auto& list = data_[Hash(key) % capacity_];
         int vertex = -1;
 
         for (auto it = list.begin(); it != list.end(); ++it) {
@@ -58,11 +60,12 @@ public:
     void Clear() {
         data_.clear();
         size_ = 0;
+        capacity_ = 0;
     }
 
 private:
-    uint Hash(long double key) const {
-        uint hash = 0;
+    uint64_t Hash(long double key) const {
+        uint64_t hash = 0;
         std::memcpy(&key, &hash, sizeof(hash));
         return hash % kPrime;
     }
@@ -108,7 +111,7 @@ public:
         auto centroids = GetCentroids();
         auto another_centroids = tree.GetCentroids();
         if (centroids.size() != another_centroids.size()) {
-            // std::cout << "-1" << std::endl;
+            std::cout << "-1" << std::endl;
             return false;
         }
 
@@ -126,7 +129,7 @@ public:
             return true;
         }
 
-        // std::cout << "-1" << std::endl;
+        std::cout << "-1" << std::endl;
 
         return false;
     }
@@ -170,9 +173,9 @@ public:
         }
 
         // PrintOldKeys(c_old, c_new, map, &old_new_vertex);
-        // for (auto new_vert : old_new_vertex) {
-        //     std::cout << (new_vert + 1) << "\n";
-        // }
+        for (auto new_vert : old_new_vertex) {
+            std::cout << (new_vert + 1) << "\n";
+        }
     }
 
     void PrintOldKeys(int old_v, int new_v, std::vector<VertexHashTable>& map,
@@ -259,58 +262,25 @@ private:
     }
 };
 
-// int main() {
-//     std::cin.tie(nullptr);
-//     std::ios_base::sync_with_stdio(false);
+int main() {
+    std::cin.tie(nullptr);
+    std::ios_base::sync_with_stdio(false);
 
-//     int size;
-//     int a_src, b_dist;
-//     std::cin >> size;
+    int size;
+    int a_src, b_dist;
+    std::cin >> size;
 
-//     Tree first(size);
-//     for (int i = 1; i < size; ++i) {
-//         std::cin >> a_src >> b_dist;
-//         first.AddEdge(a_src, b_dist);
-//     }
+    Tree first(size);
+    for (int i = 1; i < size; ++i) {
+        std::cin >> a_src >> b_dist;
+        first.AddEdge(a_src, b_dist);
+    }
 
-//     Tree second(size);
-//     for (int i = 1; i < size; ++i) {
-//         std::cin >> a_src >> b_dist;
-//         second.AddEdge(a_src, b_dist);
-//     }
+    Tree second(size);
+    for (int i = 1; i < size; ++i) {
+        std::cin >> a_src >> b_dist;
+        second.AddEdge(a_src, b_dist);
+    }
 
-//     first.IsIsomorphicWith(second);
-// }
-
-// int main() {
-//     std::cin.tie(nullptr);
-//     std::ios_base::sync_with_stdio(false);
-
-//     int t;
-//     std::cin >> t;
-//     while (t > 0) {
-//         int size;
-//         int a, b;
-//         std::cin >> size;
-
-//         Tree first(size);
-//         for (int i = 1; i < size; ++i) {
-//             std::cin >> a >> b;
-//             first.AddEdge(a, b);
-//         }
-
-//         Tree second(size);
-//         for (int i = 1; i < size; ++i) {
-//             std::cin >> a >> b;
-//             second.AddEdge(a, b);
-//         }
-
-//         if (first.IsIsomorphicWith(second)) {
-//             std::cout << "YES" << '\n';
-//         } else {
-//             std::cout << "NO" << '\n';
-//         }
-
-//         --t;
-//     }
-// }
+    first.IsIsomorphicWith(second);
+}
