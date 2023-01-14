@@ -192,11 +192,11 @@ private:
         std::sort(child_hashes.begin(), child_hashes.end(),
                   [](const HashData& lhs, const HashData& rhs) { return lhs.hash < rhs.hash; });
 
-
         uint64_t hash = 0;
         uint64_t max_mod = std::numeric_limits<uint64_t>::max() / 2;
         for (auto& child_h : child_hashes) {
-            hash = hash + (child_h.hash * child_h.hash + child_h.hash * kPrime * depth + 42) % max_mod;
+            hash =
+                hash + (child_h.hash * child_h.hash + child_h.hash * kPrime * depth + 42) % max_mod;
             hash = hash % max_mod;
         }
 
