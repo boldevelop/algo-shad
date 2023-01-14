@@ -12,7 +12,7 @@ TEST_CASE("Пример 1") {
     second.AddEdge(2, 4);
     second.AddEdge(4, 1);
     second.AddEdge(3, 4);
-    std::cout << "Should 1 2 4 3: \n";
+    std::cout << "Should 1 2 4 3 | 2 1 4 3: \n";
     REQUIRE(first.IsIsomorphicWith(second));
 }
 
@@ -43,7 +43,7 @@ TEST_CASE("Пример 3") {
     second.AddEdge(1, 4);
     second.AddEdge(2, 1);
 
-    std::cout << "Should 3 4 1 2 (?) \n";
+    std::cout << "Should 2 1 4 3 (?) \n";
     REQUIRE(first.IsIsomorphicWith(second));
 }
 
@@ -59,6 +59,6 @@ TEST_CASE("Пример 4") {
     second.AddEdge(1, 4);
     second.AddEdge(2, 1);
 
-    std::cout << "Should 3 4 1 2 (?) \n";
+    std::cout << "Should 2 1 4 3 (?) \n";
     REQUIRE(first.IsIsomorphicWith(second));
 }

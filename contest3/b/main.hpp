@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstring>
 #include <string>
+#include <stack>
 
 struct HashData {
     long double hash;
@@ -18,7 +19,15 @@ class VertexHashTable {
     int size_;
 
 public:
-    VertexHashTable() : data_(10000) {
+    VertexHashTable() : data_(0) {
+    }
+
+    void Resize(int need_capacity) {
+        if (need_capacity < 5000) {
+            data_.resize(need_capacity);
+        } else {
+            data_.resize(5000);
+        }
     }
 
     void Add(long double key, int vertex) {
@@ -42,6 +51,15 @@ public:
         return vertex;
     }
 
+    bool Empty() const {
+        return size_ == 0;
+    }
+
+    void Clear() {
+        data_.clear();
+        size_ = 0;
+    }
+
 private:
     uint Hash(long double key) const {
         uint hash = 0;
@@ -53,7 +71,7 @@ private:
 class Tree {
     std::vector<std::vector<int>> data_;
     int size_;
-    std::vector<long double> hashes_;
+    std::vector<std::vector<HashData>> hashes_;
 
 public:
     explicit Tree(int size) : data_(size), size_(size) {
@@ -71,23 +89,14 @@ public:
         return centroids;
     }
 
-    long double Hash(int centroid, bool save_hashes = false) {
-        if (save_hashes) {
-            hashes_.resize(size_);
-        }
-
-        auto hash = DfsHash(centroid, -1, save_hashes);
-
-        if (save_hashes) {
-            hashes_[centroid] = hash;
-        }
-
+    long double Hash(int centroid) {
+        hashes_.resize(size_);
+        auto hash = DfsHash(centroid, -1, nullptr);
         return hash;
     }
 
-    long double HashWithMap(int centroid, VertexHashTable* map) {
-        auto hash = DfsHashWithMap(centroid, -1, map);
-        map->Add(hash, centroid);
+    long double HashWithMap(int centroid, std::vector<VertexHashTable>* map) {
+        auto hash = DfsHash(centroid, -1, map);
         return hash;
     }
 
@@ -103,17 +112,17 @@ public:
             return false;
         }
 
-        VertexHashTable map;
+        std::vector<VertexHashTable> map(size_);
         auto first_hash = HashWithMap(centroids[0], &map);
-        auto is_poly = first_hash == tree.Hash(another_centroids[0], true);
+        auto is_poly = first_hash == tree.Hash(another_centroids[0]);
 
         if (is_poly) {
-            tree.PrintOldKeys(map);
+            tree.PrintOldKeys(centroids[0], another_centroids[0], map);
             return true;
         }
 
-        if (centroids.size() == 2 && first_hash == tree.Hash(another_centroids[1], true)) {
-            tree.PrintOldKeys(map);
+        if (centroids.size() == 2 && first_hash == tree.Hash(another_centroids[1])) {
+            tree.PrintOldKeys(centroids[0], another_centroids[1], map);
             return true;
         }
 
@@ -122,25 +131,53 @@ public:
         return false;
     }
 
-    void PrintOldKeys(VertexHashTable& map) {
-        for (auto hash : hashes_) {
-            auto old_vert = map.Remove(hash);
-            std::cout << (old_vert + 1) << std::endl;
+    void PrintOldKeys(int c_old, int c_new, std::vector<VertexHashTable>& map) {
+        // in old tree
+        std::vector<int> old_new_vertex(size_);
+
+        // std::cout << "centroid: " << c_old << std::endl;
+        // for (int i = 0; i < size_; ++i) {
+        //     std::cout << i << "\n";
+        //     for (auto& data : hashes_[i]) {
+        //         std::cout << "*- " << data.vertex << ": " << data.hash << std::endl;
+        //     }
+        // }
+        // std::cout << '\n';
+        // std::cout << "new centroid: " << c_new << std::endl;
+        // for (int i = 0; i < size_; ++i) {
+        //     std::cout << i << "\n";
+        //     for (auto& data : tree.hashes_[i]) {
+        //         std::cout << "*- " << data.vertex << ": " << data.hash << std::endl;
+        //     }
+        // }
+
+        PrintOldKeys(c_old, c_new, map, &old_new_vertex);
+        for (auto new_vert : old_new_vertex) {
+            std::cout << (new_vert + 1) << "\n";
+        }
+    }
+
+    void PrintOldKeys(int old_v, int new_v, std::vector<VertexHashTable>& map,
+                      std::vector<int>* old_new_vertex) {
+        (*old_new_vertex)[old_v] = new_v;
+
+        const auto& new_child = hashes_[new_v];
+        for (auto& data : new_child) {
+            auto next_vertex = map[old_v].Remove(data.hash);
+            PrintOldKeys(next_vertex, data.vertex, map, old_new_vertex);
         }
     }
 
 private:
-    long double DfsHash(int vertex, int prev_vert, bool save_hashes) {
+    long double DfsHash(int vertex, int prev_vert, std::vector<VertexHashTable>* map) {
         bool is_leaf = true;
 
-        std::vector<long double> child_hashes;
-        std::vector<int> vertexes;
+        std::vector<HashData> child_hashes;
 
         for (int child_v : data_[vertex]) {
             if (child_v != prev_vert) {
                 is_leaf = false;
-                child_hashes.push_back(std::log(DfsHash(child_v, vertex, save_hashes)));
-                vertexes.push_back(child_v);
+                child_hashes.push_back({std::log(DfsHash(child_v, vertex, map)), child_v});
             }
         }
 
@@ -148,49 +185,22 @@ private:
             return 199.0;
         }
 
-        if (save_hashes) {
-            for (uint i = 0; i < child_hashes.size(); ++i) {
-                hashes_[vertexes[i]] = child_hashes[i];
-            }
-        }
-
-        std::sort(child_hashes.begin(), child_hashes.end());
+        std::sort(child_hashes.begin(), child_hashes.end(),
+                  [](const HashData& lhs, const HashData& rhs) { return lhs.hash < rhs.hash; });
 
         long double sum = 3.0;
-        for (auto child_h : child_hashes) {
-            sum += child_h;
+        for (auto& child_h : child_hashes) {
+            sum += child_h.hash;
         }
 
-        return sum;
-    }
-
-    long double DfsHashWithMap(int vertex, int prev_vert, VertexHashTable* map) {
-        bool is_leaf = true;
-
-        std::vector<long double> child_hashes;
-        std::vector<int> vertexes;
-
-        for (int child_v : data_[vertex]) {
-            if (child_v != prev_vert) {
-                is_leaf = false;
-                child_hashes.push_back(std::log(DfsHashWithMap(child_v, vertex, map)));
-                vertexes.push_back(child_v);
+        if (map == nullptr) {
+            hashes_[vertex] = std::move(child_hashes);
+        } else {
+            auto& map_ref = (*map)[vertex];
+            map_ref.Resize(child_hashes.size());
+            for (auto& data : child_hashes) {
+                map_ref.Add(data.hash, data.vertex);
             }
-        }
-
-        if (is_leaf) {
-            return 199.0;
-        }
-
-        for (uint i = 0; i < child_hashes.size(); ++i) {
-            map->Add(child_hashes[i], vertexes[i]);
-        }
-
-        std::sort(child_hashes.begin(), child_hashes.end());
-
-        long double sum = 3.0;
-        for (auto child_h : child_hashes) {
-            sum += child_h;
         }
 
         return sum;
