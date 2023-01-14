@@ -6,11 +6,13 @@
 #include <cstring>
 #include <string>
 #include <stack>
+#include <limits>
+
+using HashType = uint64_t;
 
 struct HashData {
-    long double hash;
+    HashType hash;
     int vertex;
-    uint childs;
 };
 
 const uint64_t kPrime = 2 * 1'000'000'000 + 11;
@@ -34,18 +36,18 @@ public:
     }
 
     void Add(const HashData& data) {
-        auto key = data.childs;
+        auto key = data.hash;
         data_[Hash(key) % capacity_].push_back(data);
         size_++;
     }
 
     int Remove(const HashData& data) {
-        auto key = data.childs;
+        auto key = data.hash;
         auto& list = data_[Hash(key) % capacity_];
         int vertex = -1;
 
         for (auto it = list.begin(); it != list.end(); ++it) {
-            if (it->childs == data.childs) {
+            if (it->hash == data.hash) {
                 vertex = it->vertex;
                 list.erase(it);
                 break;
@@ -67,13 +69,7 @@ public:
     }
 
 private:
-    uint64_t Hash(long double key) const {
-        uint64_t hash = 0;
-        std::memcpy(&key, &hash, sizeof(hash));
-        return hash % kPrime;
-    }
-
-    uint64_t Hash(uint key) const {
+    HashType Hash(HashType key) const {
         return key % kPrime;
     }
 };
@@ -82,11 +78,6 @@ class Tree {
     std::vector<std::vector<int>> data_;
     int size_;
     std::vector<std::vector<HashData>> hashes_;
-
-    struct DfsHashType {
-        long double fl_hash;
-        uint childs;
-    };
 
 public:
     explicit Tree(int size) : data_(size), size_(size) {
@@ -104,15 +95,15 @@ public:
         return centroids;
     }
 
-    long double Hash(int centroid) {
+    HashType Hash(int centroid) {
         hashes_.resize(size_);
-        auto hash = DfsHash(centroid, -1, nullptr);
-        return hash.fl_hash;
+        auto hash = DfsHash(centroid, -1, 1, nullptr);
+        return hash;
     }
 
-    long double HashWithMap(int centroid, std::vector<VertexHashTable>* map) {
-        auto hash = DfsHash(centroid, -1, map);
-        return hash.fl_hash;
+    HashType HashWithMap(int centroid, std::vector<VertexHashTable>* map) {
+        auto hash = DfsHash(centroid, -1, 1, map);
+        return hash;
     }
 
     void Print(int vertex) {
@@ -182,31 +173,31 @@ public:
     }
 
 private:
-    DfsHashType DfsHash(int vertex, int prev_vert, std::vector<VertexHashTable>* map) {
+    HashType DfsHash(int vertex, int prev_vert, uint64_t depth, std::vector<VertexHashTable>* map) {
         bool is_leaf = true;
-
         std::vector<HashData> child_hashes;
 
         for (int child_v : data_[vertex]) {
             if (child_v != prev_vert) {
                 is_leaf = false;
-                auto hash = DfsHash(child_v, vertex, map);
-                child_hashes.push_back({std::log(hash.fl_hash), child_v, hash.childs});
+                auto hash = DfsHash(child_v, vertex, depth + 1, map);
+                child_hashes.push_back({hash, child_v});
             }
         }
 
         if (is_leaf) {
-            return {199.0, 1};
+            return depth;
         }
 
         std::sort(child_hashes.begin(), child_hashes.end(),
                   [](const HashData& lhs, const HashData& rhs) { return lhs.hash < rhs.hash; });
 
-        long double sum = 3.0;
-        uint childs = 1;
+
+        uint64_t hash = 0;
+        uint64_t max_mod = std::numeric_limits<uint64_t>::max() / 2;
         for (auto& child_h : child_hashes) {
-            sum += child_h.hash;
-            childs += child_h.childs;
+            hash = hash + (child_h.hash * child_h.hash + child_h.hash * kPrime * depth + 42) % max_mod;
+            hash = hash % max_mod;
         }
 
         if (map == nullptr) {
@@ -219,7 +210,7 @@ private:
             }
         }
 
-        return {sum, childs};
+        return hash;
     }
 
     void DfsGetCentroids(int vertex, int prev_vert, std::vector<int>& used,
