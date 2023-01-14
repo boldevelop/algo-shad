@@ -108,7 +108,7 @@ public:
         auto centroids = GetCentroids();
         auto another_centroids = tree.GetCentroids();
         if (centroids.size() != another_centroids.size()) {
-            std::cout << "-1" << std::endl;
+            // std::cout << "-1" << std::endl;
             return false;
         }
 
@@ -126,15 +126,12 @@ public:
             return true;
         }
 
-        std::cout << "-1" << std::endl;
+        // std::cout << "-1" << std::endl;
 
         return false;
     }
 
     void PrintOldKeys(int c_old, int c_new, std::vector<VertexHashTable>& map) {
-        // in old tree
-        std::vector<int> old_new_vertex(size_);
-
         // std::cout << "centroid: " << c_old << std::endl;
         // for (int i = 0; i < size_; ++i) {
         //     std::cout << i << "\n";
@@ -151,10 +148,31 @@ public:
         //     }
         // }
 
-        PrintOldKeys(c_old, c_new, map, &old_new_vertex);
-        for (auto new_vert : old_new_vertex) {
-            std::cout << (new_vert + 1) << "\n";
+        struct StackData {
+            int old_v;
+            int new_v;
+        };
+
+        std::vector<int> old_new_vertex(size_);
+        std::stack<StackData> stack_vert;
+        stack_vert.push({c_old, c_new});
+
+        while (!stack_vert.empty()) {
+            auto vertexes = stack_vert.top();
+            stack_vert.pop();
+
+            old_new_vertex[vertexes.old_v] = vertexes.new_v;
+
+            for (auto& data : hashes_[vertexes.new_v]) {
+                auto next_vertex = map[vertexes.old_v].Remove(data.hash);
+                stack_vert.push({next_vertex, data.vertex});
+            }
         }
+
+        // PrintOldKeys(c_old, c_new, map, &old_new_vertex);
+        // for (auto new_vert : old_new_vertex) {
+        //     std::cout << (new_vert + 1) << "\n";
+        // }
     }
 
     void PrintOldKeys(int old_v, int new_v, std::vector<VertexHashTable>& map,
@@ -241,25 +259,58 @@ private:
     }
 };
 
-int main() {
-    std::cin.tie(nullptr);
-    std::ios_base::sync_with_stdio(false);
+// int main() {
+//     std::cin.tie(nullptr);
+//     std::ios_base::sync_with_stdio(false);
 
-    int size;
-    int a_src, b_dist;
-    std::cin >> size;
+//     int size;
+//     int a_src, b_dist;
+//     std::cin >> size;
 
-    Tree first(size);
-    for (int i = 1; i < size; ++i) {
-        std::cin >> a_src >> b_dist;
-        first.AddEdge(a_src, b_dist);
-    }
+//     Tree first(size);
+//     for (int i = 1; i < size; ++i) {
+//         std::cin >> a_src >> b_dist;
+//         first.AddEdge(a_src, b_dist);
+//     }
 
-    Tree second(size);
-    for (int i = 1; i < size; ++i) {
-        std::cin >> a_src >> b_dist;
-        second.AddEdge(a_src, b_dist);
-    }
+//     Tree second(size);
+//     for (int i = 1; i < size; ++i) {
+//         std::cin >> a_src >> b_dist;
+//         second.AddEdge(a_src, b_dist);
+//     }
 
-    first.IsIsomorphicWith(second);
-}
+//     first.IsIsomorphicWith(second);
+// }
+
+// int main() {
+//     std::cin.tie(nullptr);
+//     std::ios_base::sync_with_stdio(false);
+
+//     int t;
+//     std::cin >> t;
+//     while (t > 0) {
+//         int size;
+//         int a, b;
+//         std::cin >> size;
+
+//         Tree first(size);
+//         for (int i = 1; i < size; ++i) {
+//             std::cin >> a >> b;
+//             first.AddEdge(a, b);
+//         }
+
+//         Tree second(size);
+//         for (int i = 1; i < size; ++i) {
+//             std::cin >> a >> b;
+//             second.AddEdge(a, b);
+//         }
+
+//         if (first.IsIsomorphicWith(second)) {
+//             std::cout << "YES" << '\n';
+//         } else {
+//             std::cout << "NO" << '\n';
+//         }
+
+//         --t;
+//     }
+// }
