@@ -3,11 +3,11 @@
 #include <algorithm>
 #include <string>
 
-#define MAIN FakeMain
-#ifdef ANSWER
-#undef MAIN
-#define MAIN main
-#endif
+// #define MAIN FakeMain
+// #ifdef ANSWER
+// #undef MAIN
+// #define MAIN main
+// #endif
 
 class Heap {
     int size_;
@@ -17,7 +17,13 @@ public:
     Heap() : size_(0), data_() {
     }
 
-    Heap(const std::vector<int> inp) : size_(inp.size()), data_(inp) {
+    explicit Heap(const std::vector<int>& inp) : size_(inp.size()), data_(std::move(inp)) {
+        BuildHeap();
+    }
+
+    void Recreate(const std::vector<int>& inp) {
+        size_ = inp.size();
+        data_ = std::move(inp);
         BuildHeap();
     }
 
@@ -32,6 +38,18 @@ public:
         --size_;
         SiftDown(0);
         return min;
+    }
+
+    int GetKStatistic(int k_term) {
+        int res = -1;
+        if (k_term > size_) {
+            return res;
+        }
+        while (k_term > 0) {
+            res = ExtractMin();
+            --k_term;
+        }
+        return res;
     }
 
     void Remove(int vert) {
@@ -117,10 +135,50 @@ private:
     }
 };
 
-int MAIN() {
+#ifndef LOCAL
+int main() {
     std::cin.tie(nullptr);
     std::ios_base::sync_with_stdio(false);
 
-    std::cout << "Hello world\n";
+    int size;         // n
+    int query_count;  // m
+    int k_stat;       // k
+    std::cin >> size >> query_count >> k_stat;
+    std::vector<int> data(size);
+
+    for (int i = 0; i < size; ++i) {
+        int elem;
+        std::cin >> elem;
+        data[i] = elem;
+    }
+
+    std::string directions;
+    std::cin >> directions;
+
+    auto left_it = data.begin();
+    auto right_it = data.begin();
+
+    int dir_i = 0;
+    while (dir_i < query_count) {
+        auto dir = directions[dir_i];
+
+        if (dir == 'R') {
+            ++right_it;
+        } else {
+            ++left_it;
+        }
+
+        if ((right_it - left_it) + 1 < k_stat) {
+            std::cout << -1 << '\n';
+        } else {
+            Heap heap({left_it, right_it + 1});
+            std::cout << heap.GetKStatistic(k_stat) << '\n';
+        }
+
+        ++dir_i;
+    }
+
     return 0;
 }
+
+#endif

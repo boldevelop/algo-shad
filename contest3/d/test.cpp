@@ -77,3 +77,42 @@ TEST_CASE("Heap remove") {
     REQUIRE(min == 1);
     REQUIRE(p.Empty());
 }
+
+TEST_CASE("Heap k statistics") {
+    Heap p;
+    {
+        int k = 2;
+        p.Recreate({4, 2});
+        REQUIRE(p.GetKStatistic(k) == 4);
+
+        p.Recreate({4, 2, 1});
+        REQUIRE(p.GetKStatistic(k) == 2);
+
+        p.Recreate({2, 1});
+        REQUIRE(p.GetKStatistic(k) == 2);
+
+        p.Recreate({1});
+        REQUIRE(p.GetKStatistic(k) == -1);
+    }
+
+    {
+        int k = 1;
+        p.Recreate({1, 2});
+        REQUIRE(p.GetKStatistic(k) == 1);
+
+        p.Recreate({2});
+        REQUIRE(p.GetKStatistic(k) == 2);
+
+        p.Recreate({2, 3});
+        REQUIRE(p.GetKStatistic(k) == 2);
+
+        p.Recreate({3});
+        REQUIRE(p.GetKStatistic(k) == 3);
+
+        p.Recreate({3, 4});
+        REQUIRE(p.GetKStatistic(k) == 3);
+
+        p.Recreate({4});
+        REQUIRE(p.GetKStatistic(k) == 4);
+    }
+}
