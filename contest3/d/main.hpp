@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <string>
 #include <limits>
+#include <util.h>
 
 const uint64_t kPrime = 2 * 1'000'000'000 + 11;
 
@@ -18,7 +19,7 @@ class HashTable {
     int size_;
 
 public:
-    HashTable() : data_(5000), size_(0) {
+    HashTable() : data_(100000), size_(0) {
     }
 
     void Add(const HashItem& item) {
@@ -31,12 +32,19 @@ public:
 
         bool is_exist = false;
 
+
+        int count = 0;
         for (auto it = list.begin(); it != list.end(); ++it) {
             if (it->global_i == item.global_i) {
                 *it = item;
                 is_exist = true;
                 break;
             }
+            count++;
+        }
+
+        if (count > 10) {
+            std::cout << "T count: " << count << '\n';
         }
 
         if (!is_exist) {
@@ -54,11 +62,11 @@ public:
             if (it->global_i == item.global_i) {
                 heap_ind = it->heap_i;
                 list.erase(it);
+                --size_;
                 break;
             }
         }
 
-        --size_;
         return heap_ind;
     }
 
@@ -83,7 +91,7 @@ private:
         uint64_t val = item.val;
         uint64_t ind = item.global_i + 1;
         uint64_t max_mod = std::numeric_limits<uint64_t>::max() / 2;
-
+        return ind;
         return (val * val + val * kPrime * ind + 42) % max_mod;
     }
 };
@@ -91,6 +99,232 @@ private:
 struct HeapItem {
     int global_i;
     int val;
+};
+
+class KStatistic {
+    std::vector<int> data_;
+    bool valid_ = false;
+
+public:
+    KStatistic() {
+    }
+
+    KStatistic(int size, std::vector<HeapItem>& data) : data_(size) {
+        for (int i = 0; i < size; ++i) {
+            data_[i] = data[i].val;
+        }
+        BuildHeap();
+    }
+
+    int Max() const {
+        return data_[0];
+    }
+
+    void UpdateTop(int val) {
+        data_[0] = val;
+        SiftDown(0);
+    }
+
+    void SetValid() {
+        valid_ = true;
+    }
+
+    bool IsValid() {
+        return valid_;
+    }
+
+    void Check(int val) {
+        if (valid_ && val <= Max()) {
+            valid_ = false;
+        }
+    }
+
+private:
+    void SiftDown(int ind) {
+        int size = data_.size();
+        while (ind < size / 2) {
+            auto left = 2 * ind + 1;
+            auto right = 2 * ind + 2;
+
+            auto child = right < size && data_[right] > data_[left] ? right : left;
+
+            if (data_[ind] >= data_[child]) {
+                break;
+            }
+
+            std::swap(data_[ind], data_[child]);
+            ind = child;
+        }
+    }
+
+    void BuildHeap() {
+        for (int i = data_.size() - 1; i >= 0; --i) {
+            SiftDown(i);
+        }
+    }
+};
+
+class MaxHeap {
+    std::vector<HeapItem> data_;
+    HashTable table_;
+    KStatistic statistic_;
+
+public:
+    MaxHeap() {
+    }
+
+    MaxHeap(const std::vector<HeapItem>& data) : data_(data), table_(), statistic_() {
+        BuildHeap();
+    }
+
+    int Max() const {
+        return data_[0].val;
+    }
+
+    int GetKStatistic(int k_term) {
+        if (k_term > static_cast<int>(data_.size())) {
+            return -1;
+        }
+
+        if (statistic_.IsValid()) {
+            return statistic_.Max();
+        }
+        statistic_ = KStatistic(k_term, data_);
+        for (int i = k_term; i < static_cast<int>(data_.size()); ++i) {
+            if (data_[i].val > statistic_.Max()) {
+                continue;
+            }
+            statistic_.UpdateTop(data_[i].val);
+        }
+        statistic_.SetValid();
+        return statistic_.Max();
+    }
+
+    void Remove(HeapItem item) {
+        statistic_.Check(item.val);
+        Log l;
+        auto vert = table_.Remove({item.global_i, item.val, 0}); // ?
+        auto duration = l.GetDurationNano();
+        if (duration > 1000)
+            std::cout << "t.r: " << duration << '\n';
+        Swap(vert, data_.size() - 1);
+        RemoveLast();
+
+        if (data_.empty()) {
+            return;
+        }
+
+        auto parent = (vert - 1) / 2;
+        if (data_[parent].val > data_[vert].val) {
+            SiftUp(vert);
+        } else {
+            SiftDown(vert);
+        }
+    }
+
+    void Add(HeapItem item) {
+        statistic_.Check(item.val);
+        data_.push_back(item);
+        int size = data_.size();
+        Log l;
+        table_.Add({item.global_i, item.val, size - 1});
+        auto duration = l.GetDurationNano();
+        if (duration > 1000)
+            std::cout << "t.a: " << duration << '\n';
+        SiftUp(size - 1);
+    }
+
+private:
+    void SiftUp(int ind) {
+        auto parent = (ind - 1) / 2;
+        while (ind != 0 && data_[parent].val < data_[ind].val) {
+            Swap(parent, ind);
+            ind = parent;
+            parent = (ind - 1) / 2;
+        }
+    }
+
+    void SiftDown(int ind) {
+        int size = data_.size();
+        while (ind < size / 2) {
+            auto left = 2 * ind + 1;
+            auto right = 2 * ind + 2;
+
+            auto child = right < size && data_[right].val > data_[left].val ? right : left;
+
+            if (data_[ind].val >= data_[child].val) {
+                break;
+            }
+
+            Swap(ind, child);
+            ind = child;
+        }
+    }
+
+    void BuildHeap() {
+        for (int i = data_.size() - 1; i >= 0; --i) {
+            Log l;
+            table_.Update({data_[i].global_i, data_[i].val, i});
+            auto duration = l.GetDurationNano();
+            if (duration > 1000)
+                std::cout << "t.u: " << duration << '\n';
+            SiftDown(i);
+        }
+    }
+
+    void Swap(int src, int dst) {
+        HashItem src_item = {data_[src].global_i, data_[src].val, dst};
+        HashItem dst_item = {data_[dst].global_i, data_[dst].val, src};
+        {
+            Log l;
+            table_.Update(src_item);
+            auto duration = l.GetDurationNano();
+            if (duration > 1000)
+                std::cout << "t.u: " << duration << '\n';
+        }
+        {
+            Log l;
+            table_.Update(dst_item);
+            auto duration = l.GetDurationNano();
+            if (duration > 1000)
+                std::cout << "t.u: " << duration << '\n';
+        }
+        std::swap(data_[src], data_[dst]);
+    }
+
+    void RemoveLast() {
+        auto& last = data_[data_.size() - 1];
+        Log l;
+        table_.Remove({last.global_i, last.val, static_cast<int>(data_.size()) - 1});
+        auto duration = l.GetDurationNano();
+        if (duration > 1000)
+            std::cout << "t.r: " << duration << '\n';
+        data_.pop_back();
+    }
+
+public:
+    void Print(int vert = 0, std::string indent = "") const {
+        if (vert == 0) {
+            std::cout << "Size: " << data_.size() << std::endl;
+        }
+        if (vert >= static_cast<int>(data_.size())) {
+            return;
+        }
+        std::cout << indent << data_[vert].val << '\n';
+        indent = vert == 0 ? "'-> " : "    " + indent;
+        Print(2 * vert + 1, indent);
+        Print(2 * vert + 2, indent);
+        if (vert == 0) {
+            std::cout << "- - - - - - \n\n";
+        }
+    }
+
+    void PrintData() const {
+        for (int i = 0; i < static_cast<int>(data_.size()); ++i) {
+            std::cout << data_[i].val << " ";
+        }
+        std::cout << std::endl;
+    }
 };
 
 class Heap {
@@ -127,10 +361,9 @@ public:
     }
 
     int GetKStatistic(int k_term) {
-        int res = -1;
+        return Min();
         if (k_term > size_) {
-            last_k_ = -1;
-            return res;
+            return -1;
         }
 
         if (last_k_ == -1) {
@@ -212,8 +445,8 @@ public:
     }
 
     void PrintData() const {
-        for (auto item : data_) {
-            std::cout << item.val << " ";
+        for (int i = 0; i < size_; ++i) {
+            std::cout << data_[i].val << " ";
         }
         std::cout << std::endl;
     }
@@ -282,21 +515,70 @@ private:
     }
 };
 
-void GetKStatistic(int k_stat, const std::string& directions, const std::vector<int>& data) {
+std::vector<int> GetKStatistic(int k_stat, const std::string& directions, const std::vector<int>& data) {
     auto left_i = 0;
     auto right_i = 0;
-    Heap heap({{0, data[0]}});
+    std::vector<int> result;
+    if (k_stat == 1) {
+        Heap heap({{0, data[0]}});
+
+        for (char dir : directions) {
+            if (dir == 'R') {
+                ++right_i;
+                heap.Add({right_i, data[right_i]});
+            } else {
+                heap.Remove({left_i, data[left_i]});
+                ++left_i;
+            }
+
+            result.push_back(heap.GetKStatistic(k_stat));
+        }
+
+        return result;
+    }
+
+    MaxHeap max_heap({{0, data[0]}});
+
+    Log log;
 
     for (char dir : directions) {
         if (dir == 'R') {
             ++right_i;
-            heap.Add({right_i, data[right_i]});
+            Log l;
+            max_heap.Add({right_i, data[right_i]});
+            auto duration = l.GetDuration();
+            if (duration > 100000)
+                std::cout << "max_heap.Add: " << duration << std::endl;
         } else {
-            heap.Remove({left_i, data[left_i]});
+            Log l;
+            max_heap.Remove({left_i, data[left_i]});
+            auto duration = l.GetDuration();
+            if (duration > 300000)
+                std::cout << "max_heap.Remove: " << duration << std::endl;
             ++left_i;
         }
-        std::cout << heap.GetKStatistic(k_stat) << '\n';
+        auto answer = -1;
+        {
+            Log l;
+            answer = max_heap.GetKStatistic(k_stat);
+            auto duration = l.GetDuration();
+            if (duration > 100000) {
+                std::cout << "max_heap GetKStatistic: " << duration << std::endl;
+            }
+        }
+        {
+            Log l;
+            auto duration = l.GetDuration();
+            result.push_back(answer);
+            if (duration > 2000) {
+                std::cout << "Push_back: " << duration << std::endl;
+            }
+        }
     }
+
+    std::cout << "Log: " << log.GetDuration() << std::endl;
+
+    return result;
 }
 
 #ifndef LOCAL

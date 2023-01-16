@@ -94,4 +94,15 @@ public:
         auto ms_int = duration_cast<milliseconds>(end_time - begin_time_);
         return ms_int.count();
     }
+
+    int64_t GetDurationNano() {
+        using std::chrono::duration;
+        using std::chrono::duration_cast;
+        using std::chrono::high_resolution_clock;
+        using std::chrono::nanoseconds;
+
+        auto end_time = clock_.now();
+        auto ms_int = duration_cast<nanoseconds>(end_time - begin_time_);
+        return ms_int.count();
+    }
 };

@@ -1,0 +1,9 @@
+Filters: Stress 10000
+test: 10000
+start
+Log: 1297
+s: 10000 k: 4999 dur: 1299
+end
+===============================================================================
+All tests passed (1 assertion in 1 test case)
+
