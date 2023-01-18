@@ -14,8 +14,30 @@ struct HashItem {
     int heap_i;
 };
 
+class IndexTable {
+    std::vector<int> data_;
+    int size_;
+public:
+    IndexTable() : data_(100000), size_(0) {
+    }
+
+    void Add(int global_ind, int heap_i) {
+        data_[global_ind] = heap_i;
+        size_++;
+    }
+
+    void Update(int global_ind, int heap_i) {
+        data_[global_ind] = heap_i;
+    }
+    int Remove(int global_ind) {
+        auto ind = data_[global_ind];
+        data_[global_ind] = -1;
+        return ind;
+    }
+};
+
 class HashTable {
-    std::vector<std::list<HashItem>> data_;
+    std::vector<int> data_;
     int size_;
 
 public:
@@ -23,64 +45,69 @@ public:
     }
 
     void Add(const HashItem& item) {
-        data_[Hash(item) % data_.size()].push_back(item);
+        data_[Hash(item)] = item.heap_i;
+        // data_[Hash(item) % data_.size()].push_back(item);
         size_++;
     }
 
     void Update(const HashItem& item) {
-        auto& list = data_[Hash(item) % data_.size()];
+        // auto& list = data_[Hash(item) % data_.size()];
+        data_[Hash(item)] = item.heap_i;
+        return;
+        // bool is_exist = false;
 
-        bool is_exist = false;
 
+        // int count = 0;
+        // for (auto it = list.begin(); it != list.end(); ++it) {
+        //     if (it->global_i == item.global_i) {
+        //         *it = item;
+        //         is_exist = true;
+        //         break;
+        //     }
+        //     ++count;
+        // }
 
-        int count = 0;
-        for (auto it = list.begin(); it != list.end(); ++it) {
-            if (it->global_i == item.global_i) {
-                *it = item;
-                is_exist = true;
-                break;
-            }
-            count++;
-        }
+        // if (count > 10) {
+        //     std::cout << "T count: " << count << '\n';
+        // }
 
-        if (count > 10) {
-            std::cout << "T count: " << count << '\n';
-        }
-
-        if (!is_exist) {
-            list.push_back(item);
-            size_++;
-        }
+        // if (!is_exist) {
+        //     list.push_back(item);
+        //     ++size_;
+        // }
     }
 
     int Remove(const HashItem& item) {
-        auto& list = data_[Hash(item) % data_.size()];
-
-        int heap_ind = -1;
-
-        for (auto it = list.begin(); it != list.end(); ++it) {
-            if (it->global_i == item.global_i) {
-                heap_ind = it->heap_i;
-                list.erase(it);
-                --size_;
-                break;
-            }
-        }
-
+        auto heap_ind = data_[Hash(item)];
+        data_[Hash(item)] = -1;
         return heap_ind;
+        // auto& list = data_[Hash(item) % data_.size()];
+
+        // int heap_ind = -1;
+
+        // for (auto it = list.begin(); it != list.end(); ++it) {
+        //     if (it->global_i == item.global_i) {
+        //         heap_ind = it->heap_i;
+        //         list.erase(it);
+        //         --size_;
+        //         break;
+        //     }
+        // }
+
+        // return heap_ind;
     }
 
-    bool Has(const HashItem& item) {
-        auto& list = data_[Hash(item) % data_.size()];
+    // bool Has(const HashItem& item) {
+    //     auto& list = data_[Hash(item) % data_.size()];
 
-        for (auto it = list.begin(); it != list.end(); ++it) {
-            if (it->global_i == item.global_i) {
-                return true;
-            }
-        }
+    //     for (auto it = list.begin(); it != list.end(); ++it) {
+    //         if (it->global_i == item.global_i) {
+    //             return true;
+    //         }
+    //     }
 
-        return false;
-    }
+    //     return false;
+    // }
 
     int Size() const {
         return size_;
@@ -88,10 +115,11 @@ public:
 
 private:
     uint64_t Hash(const HashItem& item) {
+        return item.global_i;
         uint64_t val = item.val;
         uint64_t ind = item.global_i + 1;
         uint64_t max_mod = std::numeric_limits<uint64_t>::max() / 2;
-        return ind;
+        return ind - 1;
         return (val * val + val * kPrime * ind + 42) % max_mod;
     }
 };
@@ -166,14 +194,16 @@ private:
 
 class MaxHeap {
     std::vector<HeapItem> data_;
-    HashTable table_;
+    int size_;
+    IndexTable table_;
     KStatistic statistic_;
 
 public:
     MaxHeap() {
     }
 
-    MaxHeap(const std::vector<HeapItem>& data) : data_(data), table_(), statistic_() {
+    MaxHeap(int size, const std::vector<HeapItem>& data) : data_(data), size_(data.size()), table_(), statistic_() {
+        data_.resize(size);
         BuildHeap();
     }
 
@@ -182,7 +212,7 @@ public:
     }
 
     int GetKStatistic(int k_term) {
-        if (k_term > static_cast<int>(data_.size())) {
+        if (k_term > size_) {
             return -1;
         }
 
@@ -190,7 +220,7 @@ public:
             return statistic_.Max();
         }
         statistic_ = KStatistic(k_term, data_);
-        for (int i = k_term; i < static_cast<int>(data_.size()); ++i) {
+        for (int i = k_term; i < size_; ++i) {
             if (data_[i].val > statistic_.Max()) {
                 continue;
             }
@@ -203,14 +233,14 @@ public:
     void Remove(HeapItem item) {
         statistic_.Check(item.val);
         Log l;
-        auto vert = table_.Remove({item.global_i, item.val, 0}); // ?
+        auto vert = table_.Remove(item.global_i); // ?
         auto duration = l.GetDurationNano();
         if (duration > 1000)
             std::cout << "t.r: " << duration << '\n';
-        Swap(vert, data_.size() - 1);
+        Swap(vert, size_ - 1);
         RemoveLast();
 
-        if (data_.empty()) {
+        if (size_ == 0) {
             return;
         }
 
@@ -224,14 +254,20 @@ public:
 
     void Add(HeapItem item) {
         statistic_.Check(item.val);
-        data_.push_back(item);
-        int size = data_.size();
+        {
+            Log l;
+            data_[size_] = item;
+            auto duration = l.GetDurationNano();
+            if (duration > 1000)
+                std::cout << "d.p: " << duration << '\n';
+        }
+        ++size_;
         Log l;
-        table_.Add({item.global_i, item.val, size - 1});
+        table_.Add(item.global_i, size_ - 1);
         auto duration = l.GetDurationNano();
-        if (duration > 1000)
-            std::cout << "t.a: " << duration << '\n';
-        SiftUp(size - 1);
+        if (duration > 100)
+            std::cout << "t.a: " << duration << " s: " << size_ << '\n';
+        SiftUp(size_ - 1);
     }
 
 private:
@@ -245,12 +281,11 @@ private:
     }
 
     void SiftDown(int ind) {
-        int size = data_.size();
-        while (ind < size / 2) {
+        while (ind < size_ / 2) {
             auto left = 2 * ind + 1;
             auto right = 2 * ind + 2;
 
-            auto child = right < size && data_[right].val > data_[left].val ? right : left;
+            auto child = right < size_ && data_[right].val > data_[left].val ? right : left;
 
             if (data_[ind].val >= data_[child].val) {
                 break;
@@ -262,52 +297,53 @@ private:
     }
 
     void BuildHeap() {
-        for (int i = data_.size() - 1; i >= 0; --i) {
+        for (int i = size_ - 1; i >= 0; --i) {
             Log l;
-            table_.Update({data_[i].global_i, data_[i].val, i});
+            table_.Update(0, i);
             auto duration = l.GetDurationNano();
             if (duration > 1000)
-                std::cout << "t.u: " << duration << '\n';
+                std::cout << "t.u: " << duration << " BuildHeap: " << size_ << '\n';
             SiftDown(i);
         }
     }
 
     void Swap(int src, int dst) {
-        HashItem src_item = {data_[src].global_i, data_[src].val, dst};
-        HashItem dst_item = {data_[dst].global_i, data_[dst].val, src};
+        // HashItem src_item = {data_[src].global_i, data_[src].val, dst};
+        // HashItem dst_item = {data_[dst].global_i, data_[dst].val, src};
         {
             Log l;
-            table_.Update(src_item);
+            table_.Update(data_[src].global_i, dst);
             auto duration = l.GetDurationNano();
             if (duration > 1000)
-                std::cout << "t.u: " << duration << '\n';
+                std::cout << "t.u: " << duration << " Swap1:" << size_ << '\n';
         }
         {
             Log l;
-            table_.Update(dst_item);
+            table_.Update(data_[dst].global_i, src);
             auto duration = l.GetDurationNano();
             if (duration > 1000)
-                std::cout << "t.u: " << duration << '\n';
+                std::cout << "t.u: " << duration << " Swap2:" << size_ << '\n';
         }
         std::swap(data_[src], data_[dst]);
     }
 
     void RemoveLast() {
-        auto& last = data_[data_.size() - 1];
+        auto& last = data_[size_ - 1];
         Log l;
-        table_.Remove({last.global_i, last.val, static_cast<int>(data_.size()) - 1});
+        table_.Remove(last.global_i);
         auto duration = l.GetDurationNano();
         if (duration > 1000)
             std::cout << "t.r: " << duration << '\n';
-        data_.pop_back();
+        --size_;
+        // data_.pop_back();
     }
 
 public:
     void Print(int vert = 0, std::string indent = "") const {
         if (vert == 0) {
-            std::cout << "Size: " << data_.size() << std::endl;
+            std::cout << "Size: " << size_ << std::endl;
         }
-        if (vert >= static_cast<int>(data_.size())) {
+        if (vert >= size_) {
             return;
         }
         std::cout << indent << data_[vert].val << '\n';
@@ -320,7 +356,7 @@ public:
     }
 
     void PrintData() const {
-        for (int i = 0; i < static_cast<int>(data_.size()); ++i) {
+        for (int i = 0; i < size_; ++i) {
             std::cout << data_[i].val << " ";
         }
         std::cout << std::endl;
@@ -537,7 +573,7 @@ std::vector<int> GetKStatistic(int k_stat, const std::string& directions, const 
         return result;
     }
 
-    MaxHeap max_heap({{0, data[0]}});
+    MaxHeap max_heap(data.size(), {{0, data[0]}});
 
     Log log;
 
