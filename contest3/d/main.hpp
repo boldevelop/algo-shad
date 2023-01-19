@@ -251,13 +251,13 @@ std::vector<int> GetKStatistic(int k_stat, const std::string& directions,
     auto left_i = 0;
     auto right_i = 0;
     std::vector<int> result;
-    auto size = data.size();
-    result.reserve(size);
+    int size = data.size();
+    result.reserve(directions.size());
 
     IndexTable table_st(size);
     IndexTable table(size);
     HeapStatistic heap_st(k_stat, table_st);
-    Heap heap(size - k_stat, table);
+    Heap heap(std::max(size - k_stat, 0), table);
 
     heap_st.Add(data[0], 0);
 
@@ -311,51 +311,14 @@ int main() {
         data[i] = elem;
     }
 
-    auto left_i = 0;
-    auto right_i = 0;
-
-    IndexTable table_st(size);
-    IndexTable table(size);
-    HeapStatistic heap_st(k_stat, table_st);
-    Heap heap(size - k_stat, table);
-
-    if (!data.empty()) {
-        heap_st.Add(data[0], 0);
-    }
     std::string directions;
     std::cin >> directions;
 
-    for (auto dir : directions) {
-        if (dir == 'R') {
-            ++right_i;
-
-            auto val = data[right_i];
-            if (heap_st.Size() < k_stat) {
-                heap_st.Add(val, right_i);
-            } else if (val < heap_st.Top()) {
-                auto item = heap_st.ExtractTopWithAdd(val, right_i);
-                heap.Add(item.val, item.ind);
-            } else {
-                heap.Add(val, right_i);
-            }
-
-        } else {
-            if (table_st.Has(left_i)) {
-                heap_st.RemoveWithAdd(table_st.Remove(left_i), heap);
-            } else {
-                table.Remove(left_i);
-            }
-
-            ++left_i;
-        }
-
-        if (heap_st.Size() == k_stat) {
-            std::cout << heap_st.Top() << '\n';
-        } else {
-            std::cout << -1 << '\n';
-        }
+    std::vector<int> result;
+    result = GetKStatistic(k_stat, directions, data);
+    for (auto num : result) {
+        std::cout << num << '\n';
     }
-
     return 0;
 }
 

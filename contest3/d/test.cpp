@@ -198,6 +198,94 @@ TEST_CASE("Another") {
         int kstats = 2;
         REQUIRE(SlowSolution(kstats, moves, input) == GetKStatistic(kstats, moves, input));
     }
+    {
+        RandomGenerator rand_gen;
+        int size = 1;
+        while (size < 16) {
+            int k = 1;
+            while (k < size) {
+                std::vector<int> data;
+                auto v_size = 0;
+                auto a = rand_gen.GenInt(0, 1'000'000'000);
+                auto b = rand_gen.GenInt(0, 1'000'000'000);
+                while (v_size < size) {
+                    if (v_size + 1 == size) {
+                        data.push_back(a);
+                        ++v_size;
+                        continue;
+                    }
+                    data.push_back(a);
+                    data.push_back(b);
+                    v_size += 2;
+                }
+                rand_gen.Shuffle(data.begin(), data.end());
+
+                std::string directions;
+                for (int i = 0; i < size - 1; ++i) {
+                    directions += "R";
+                }
+                for (int i = 0; i < size - 1; ++i) {
+                    directions += "L";
+                }
+
+                REQUIRE(SlowSolution(k, directions, data) == GetKStatistic(k, directions, data));
+
+                ++k;
+            }
+            ++size;
+        }
+    }
+}
+
+TEST_CASE("STRANGE") {
+    {
+        std::vector<int> input{1, 4, 5};
+        std::string moves = "RLL";
+        int kstats = 6;
+        REQUIRE(SlowSolution(kstats, moves, input) == GetKStatistic(kstats, moves, input));
+    }
+}
+
+TEST_CASE("RANDOM") {
+    {
+        RandomGenerator rand_gen;
+        int size = 1;
+        while (size < 17) {
+            int k = 1;
+            while (k < size) {
+                auto var = 0;
+                while (var < 2) {
+                    std::string directions;
+
+                    if (var == 0) {
+                        for (int i = 0; i < size - 1; ++i) {
+                            directions += "R";
+                        }
+                        for (int i = 0; i < size - 1; ++i) {
+                            directions += "L";
+                        }
+
+                    } else {
+                        for (int i = 0; i < size - 1; i = i + 1 + 1) {
+                            directions += "RL";
+                        }
+                    }
+
+
+                    std::vector<int> data = rand_gen.GenIntegralVector(size, 0, 1'000'000'000);
+                    std::sort(data.begin(), data.end());
+                    do {
+                        REQUIRE(SlowSolution(k, directions, data) == GetKStatistic(k, directions, data));
+                    } while (std::next_permutation(data.begin(), data.end()));
+
+
+                    ++var;
+                }
+                ++k;
+            }
+            ++size;
+        }
+    }
 }
 
 TEST_CASE("Small 4") {
@@ -212,7 +300,7 @@ TEST_CASE("Small 4") {
         do {
 
             int c = 0;
-            while (c < 3) {
+            while (c < 4) {
 
                 if (c == 0) {
                     std::string directions = "RRRR";
@@ -239,6 +327,13 @@ TEST_CASE("Small 4") {
                         } while (std::next_permutation(str_next.begin(), str_next.end()));
 
                     } while (std::next_permutation(str.begin(), str.end()));
+                } else if (c == 3) {
+                    std::string directions;
+                    for (int i = 0; i < size - 1; i = i + 1 + 1) {
+                        directions += "RL";
+                    }
+                    std::cout << k << " " << size << " " << directions.size() << std::endl;
+                    REQUIRE(SlowSolution(k, directions, data) == GetKStatistic(k, directions, data));
                 }
 
                 ++c;
@@ -254,7 +349,7 @@ TEST_CASE("Small") {
         int size = 1;
         RandomGenerator rand_gen;
 
-        while (size < 8) {
+        while (size < 10) {
             int k = 1;
             while (k < size) {
 
