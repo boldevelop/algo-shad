@@ -24,6 +24,7 @@ add_task(2 b)
 
 add_task(3 a)
 add_task(3 b)
+add_task(3 c)
 add_task(3 d)
 add_task(3 e)
 
