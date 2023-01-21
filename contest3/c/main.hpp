@@ -3,6 +3,8 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <string>
+#include <sstream>
 
 struct Segment {
     bool allocated;
@@ -50,7 +52,7 @@ class MaxHeap {
     std::vector<Ptr> data_;
 
 public:
-    MaxHeap(int size);
+    explicit MaxHeap(int size);
     void Add(Ptr it);
     void Remove(int ind);
     void Update(int ind);
@@ -62,6 +64,7 @@ private:
     void SiftUp(int ind);
     void SiftDown(int ind);
     void Swap(int src, int dst);
+    bool Compare(int src, int dst);
 };
 
 class Memory {
@@ -69,7 +72,7 @@ class Memory {
     int size_;
 
 public:
-    Memory(int size) : main_(new Segment(false, 0, size, -1, nullptr, nullptr)) {
+    explicit Memory(int size) : main_(new Segment(false, 0, size, -1, nullptr, nullptr)), size_(0) {
         auto fake = new Segment(true, 0, 0, -1, main_, main_, true);
         main_->next = fake;
         main_->prev = fake;
@@ -123,73 +126,43 @@ public:
     }
 
     void PrintSegment(Segment* seg) {
-        std::cout << "Alloc: " << seg << " n->" << seg->next << std::endl;
+        std::stringstream ssstream;
+        ssstream << seg;
+        std::string addr = ssstream.str();
+        std::cout << addr.substr(addr.size() - 6) << "->";
     }
     void Print() {
         auto fake = main_->next;
         auto next = fake->next;
+        std::cout << size_ << ": ";
+        PrintSegment(fake);
+
         while (next != fake) {
-            std::cout << next << "->";
+            PrintSegment(next);
             next = next->next;
         }
         std::cout << std::endl;
     }
 };
 
-struct HashItem {
-    int req_id;
-    Ptr segment;
-    HashItem(int req, Ptr seg) : req_id(req), segment(seg) {
-    }
-};
-
-class HashTable {
-    std::vector<std::list<HashItem>> data_;
-    int size_;
-
-public:
-    HashTable(int size) : data_(size), size_(0) {
-    }
-    void Add(int req_id, Ptr segment) {
-        data_[Hash(req_id) % data_.size()].emplace_back(req_id, segment);
-        ++size_;
-    }
-    Ptr Remove(int req_id) {
-        Ptr res = nullptr;
-        auto& list = data_[Hash(req_id) % data_.size()];
-        for (auto it = list.begin(); it != list.end();) {
-            if (it->req_id == req_id) {
-                res = it->segment;
-                it = list.erase(it);
-                --size_;
-                break;
-            } else {
-                ++it;
-            }
-        }
-        return res;
-    }
-
-private:
-    uint64_t Hash(uint64_t req_id) {
-        return req_id;
-    }
-};
-
 class Manager {
 public:
-    Manager(int size);
+    Manager(int size, int query_count);
     int Alloc(int mem_count);
     void Free(int req_id);
+    void DumpMemory() {
+        memory_.Print();
+    }
 
 private:
     int req_id_;
-    MaxHeap heap_;
-    HashTable table_;
     Memory memory_;
+    MaxHeap heap_;
+    std::vector<Ptr> segments_;
 };
 
-Manager::Manager(int size) : req_id_(0), heap_(size), table_(size), memory_(size) {
+Manager::Manager(int size, int query_count)
+    : req_id_(0), memory_(size), heap_(query_count), segments_(query_count, nullptr) {
     heap_.Add(memory_.Main());
 }
 
@@ -199,7 +172,7 @@ int Manager::Alloc(int mem_count) {
     if (heap_.Size() == 0) {
         return result;
     }
-    auto longest_segment = heap_.Top();  // ? remove from table ?
+    auto longest_segment = heap_.Top();
 
     if (mem_count > longest_segment->Size()) {
         return result;
@@ -207,7 +180,7 @@ int Manager::Alloc(int mem_count) {
 
     result = longest_segment->from + 1;
     auto new_segment = memory_.Alloc(longest_segment, mem_count);
-    table_.Add(req_id_ - 1, new_segment);
+    segments_[req_id_ - 1] = new_segment;
 
     if (longest_segment->Size() > 0) {
         heap_.Update(longest_segment->heap_ind);
@@ -224,11 +197,11 @@ void Manager::Free(int req_id) {
         return;
     }
 
-    auto segment = table_.Remove(req_id);
-    if (!segment) {  // ?
+    auto segment = segments_[req_id];
+    if (!segment) {
         return;
     }
-
+    segments_[req_id] = nullptr;
     auto segment_prev = segment->prev;
     auto segment_next = segment->next;
     auto prev_freed = segment_prev->IsAccessible();
@@ -273,7 +246,7 @@ void MaxHeap::Remove(int ind) {
         return;
     }
     auto parent = (ind - 1) / 2;
-    if (data_[ind]->Size() > data_[parent]->Size()) {
+    if (Compare(ind, parent)) {
         SiftUp(ind);
     } else {
         SiftDown(ind);
@@ -282,7 +255,7 @@ void MaxHeap::Remove(int ind) {
 
 void MaxHeap::Update(int ind) {
     auto parent = (ind - 1) / 2;
-    if (data_[ind]->Size() > data_[parent]->Size()) {
+    if (Compare(ind, parent)) {
         SiftUp(ind);
     } else {
         SiftDown(ind);
@@ -299,11 +272,18 @@ Ptr MaxHeap::Top() {
 
 void MaxHeap::SiftUp(int ind) {
     auto parent = (ind - 1) / 2;
-    while (ind != 0 && data_[ind]->Size() > data_[parent]->Size()) {
+    while (ind != 0 && Compare(ind, parent)) {
         Swap(parent, ind);
         ind = parent;
         parent = (ind - 1) / 2;
     }
+}
+
+bool MaxHeap::Compare(int ind, int parent) {
+    if (data_[ind]->Size() == data_[parent]->Size()) {
+        return data_[ind]->from < data_[parent]->from;
+    }
+    return data_[ind]->Size() > data_[parent]->Size();
 }
 
 void MaxHeap::SiftDown(int ind) {
@@ -312,9 +292,9 @@ void MaxHeap::SiftDown(int ind) {
         auto left = 2 * ind + 1;
         auto right = 2 * ind + 2;
 
-        auto child = right < size && data_[right]->Size() > data_[left]->Size() ? right : left;
+        auto child = right < size && Compare(right, left) ? right : left;
 
-        if (data_[ind]->Size() >= data_[child]->Size()) {
+        if (Compare(ind, child)) {
             break;
         }
 
@@ -350,11 +330,11 @@ int main() {
     std::cin.tie(nullptr);
     std::ios_base::sync_with_stdio(false);
 
-    int size;         // n
-    int query_count;  // m
+    int size;         // n 2^31
+    int query_count;  // m 100'000
     std::cin >> size >> query_count;
 
-    Manager manager(size);
+    Manager manager(size, query_count);
     while (query_count > 0) {
         int request;
         std::cin >> request;
