@@ -6,6 +6,7 @@
 #include <numeric>
 #include <filesystem>
 #include <chrono>
+#include <iostream>
 
 class RandomGenerator {
 public:
@@ -106,3 +107,13 @@ public:
         return ms_int.count();
     }
 };
+
+
+void Dump(const std::vector<int>& data) {
+    for (int i = 0; i < static_cast<int>(data.size()); ++i) {
+        std::cout << data[i];
+        if (i != static_cast<int>(data.size()) - 1) {
+            std::cout << ", ";
+        }
+    }
+}
