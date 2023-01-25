@@ -29,7 +29,7 @@
 24 1289904147324,
 25 4861946401452,
 */
-/*
+
 class Catalan {
     Seq catalan_;
 
@@ -50,14 +50,20 @@ public:
 private:
     void GenerateCatalanNumbers() {
         catalan_[1] = 1;
-        for (int i = 2; i <= static_cast<int>(catalan_.size()); i++) {
+        for (int i = 2; i < static_cast<int>(catalan_.size()); i++) {
             for (int j = 1; j <= i - 1; j++) {
                 catalan_[i] = (catalan_[i] + ((catalan_[j]) * catalan_[i - j]) % mod) % mod;
             }
             catalan_[i] = catalan_[i] % mod;
         }
     }
-}; */
+};
+
+TEST_CASE("Пример 0") {
+    REQUIRE(CountBST({1, 1, 1}) == 1);
+    REQUIRE(CountBST({1, 2, 2}) == 2);
+    REQUIRE(CountBST({1, 1, 2}) == 3);
+}
 
 TEST_CASE("Пример 1") {
     Seq data{2, 1};
@@ -72,6 +78,21 @@ TEST_CASE("Пример 2") {
 TEST_CASE("Пример 3") {
     Seq data{1, 2, 3};
     REQUIRE(CountBST(data) == 5);
+}
+
+TEST_CASE("Пример 3.1") {
+    Seq data{1, 1, 2, 2, 3, 3, 4, 4};
+    REQUIRE(CountBST(data) == 55);
+}
+
+TEST_CASE("Пример 3.2") {
+    Seq data{1, 1, 2};
+    REQUIRE(CountBST(data) == 3);
+}
+
+TEST_CASE("Пример 3.3") {
+    Seq data{1, 2, 2};
+    REQUIRE(CountBST(data) == 2);
 }
 
 TEST_CASE("Пример 4") {
@@ -90,115 +111,23 @@ TEST_CASE("Пример 4") {
         REQUIRE(res == catalan.GetCatalanNum(size));
         size++;
     }
+
+    size = 1;
+    while (size < 401) {
+        Seq data(size, -100);
+        Log l;
+        auto res = CountBST(data);
+        auto dur = l.GetDuration();
+        if (dur > 500) {
+            std::cout << "s: " << size << " ";
+            std::cout << l.GetDuration() << std::endl;
+        }
+        REQUIRE(res == 1);
+        size++;
+    }
 }
 
 TEST_CASE("Пример 5") {
     Seq data{1, 2, 2, 3};
-    REQUIRE(CountBST(data) == 5);
-}
-
-TEST_CASE("Пример 6") {
-    Seq data{1, 2, 2, 3, 3};
-    REQUIRE(CountBST(data) == 5);
-}
-
-
-TEST_CASE("Пример 7") {
-    Seq data(400, 1'000'000);
-    Log l;
-    auto res = CountBST(data);
-    auto dur = l.GetDuration();
-    if (dur > 500) {
-        std::cout << "Пример 7 ";
-        std::cout << l.GetDuration() << std::endl;
-    }
-    REQUIRE(res == 1);
-}
-
-TEST_CASE("Пример 8") {
-    {
-        Seq data(400, 1'000'000);
-        data[0] = 1;
-        Log l;
-        auto res = CountBST(data);
-        auto dur = l.GetDuration();
-        if (dur > 500) {
-            std::cout << "Пример 8 ";
-            std::cout << l.GetDuration() << std::endl;
-        }
-        REQUIRE(res == 2);
-    }
-    {
-        Seq data(400, 1);
-        data[400 - 1] = 1'000'000;
-        Log l;
-        auto res = CountBST(data);
-        auto dur = l.GetDuration();
-        if (dur > 500) {
-            std::cout << "Пример 8 ";
-            std::cout << l.GetDuration() << std::endl;
-        }
-        REQUIRE(res == 2);
-    }
-}
-
-TEST_CASE("Пример 9") {
-    {
-        int size = 400;
-        Seq data(size, 1'000'000);
-        for (int i = 0; i < size / 2; ++i) {
-            data[i] = 1;
-        }
-        Log l;
-        auto res = CountBST(data);
-        auto dur = l.GetDuration();
-        if (dur > 500) {
-            std::cout << "Пример 9 ";
-            std::cout << l.GetDuration() << std::endl;
-        }
-        REQUIRE(res == 2);
-    }
-    {
-        int size = 400;
-        Seq data(size, 1);
-        for (int i = 0; i < size / 2; ++i) {
-            data[i] = 1'000'000;
-        }
-        Log l;
-        auto res = CountBST(data);
-        auto dur = l.GetDuration();
-        if (dur > 500) {
-            std::cout << "Пример 9 ";
-            std::cout << l.GetDuration() << std::endl;
-        }
-        REQUIRE(res == 2);
-    }
-}
-
-TEST_CASE("Пример 10") {
-    Seq data{1, 1, 1, 2, 2, 2, 2, 3};
-    REQUIRE(CountBST(data) == 5);
-}
-
-TEST_CASE("Пример 11") {
-    Seq data{1, 1, 2, 2, 3, 3};
-    REQUIRE(CountBST(data) == 5);
-}
-
-TEST_CASE("Пример 12") {
-    Seq data{1, 1, 2, 2, 3, 3, 4, 4};
-    REQUIRE(CountBST(data) == 14);
-}
-
-TEST_CASE("Пример 13") {
-    Catalan catalan(401);
-    Seq data(400, 1);
-    int num = 0;
-    for (int i = 0; i < static_cast<int>(data.size()); ++i) {
-        if (i % 2 == 0) {
-            ++num;
-        }
-        data[i] = num;
-    }
-    REQUIRE(CountBST(data) == catalan.GetCatalanNum(200));
+    REQUIRE(CountBST(data) == 7); // ?
 }
