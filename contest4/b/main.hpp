@@ -48,24 +48,15 @@ public:
     }
 
     void Remove(int val) {
-        auto pair = Split(root_, val);
-        auto elem = Find(val);
-        if (elem) {
-            elem = Merge(elem->left, elem->right);
-        }
+        auto pair = Split(root_, val - 1);
+        auto pair_second = Split(pair.second, val);
+        std::cout << "Height: " << GetHeightImpl(pair_second.first) << std::endl;
+        root_ = Merge(pair.first, pair_second.second);
     }
 
     NodePtr Find(int val) {
-        // ? ? ? ? ? ?
-        auto elem = root_;
-        while (elem && elem->key != val) {
-            if (val < elem->key) {
-                elem = elem->left;
-                continue;
-            }
-            elem = elem->right;
-        }
-        return elem;
+        auto pair = Split(root_, val - 1);
+        return pair.second;
     }
 
     void Print() const {
@@ -91,18 +82,7 @@ private:
         right->left = Merge(left, right->left);
         return right;
     }
-    /*
-    void split (pitem t, int key, pitem & l, pitem & r) {
-	if (!t)
-		l = r = NULL;
-	else if (key < t->key)
-		split (t->l, key, l, t->l),  r = t;
-	else
-		split (t->r, key, t->r, r),  l = t;
-}
 
-
-     */
     std::pair<NodePtr, NodePtr> Split(NodePtr node, int val) {
         if (!node) {
             return {};

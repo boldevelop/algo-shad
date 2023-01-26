@@ -28,14 +28,16 @@ TEST_CASE("Treap Insert") {
         treap.Insert(num);
         treap.Insert(num);
     }
-    treap.Print();
     treap.PrintData();
-    treap.PrintData(treap.Find(1));
-    treap.PrintData(treap.Find(2));
-    treap.PrintData(treap.Find(3));
-    treap.PrintData(treap.Find(4));
-    treap.PrintData(treap.Find(5));
-    treap.PrintData(treap.Find(6));
+    for (auto num : data) {
+        treap.Remove(num);
+        treap.PrintData(treap.Find(num));
+    }
+    // treap.PrintData(treap.Find(2));
+    // treap.PrintData(treap.Find(3));
+    // treap.PrintData(treap.Find(4));
+    // treap.PrintData(treap.Find(5));
+    // treap.PrintData(treap.Find(6));
     // std::cout << treap.GetHeight() << std::endl;
     REQUIRE(true);
 }
