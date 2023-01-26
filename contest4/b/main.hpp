@@ -31,32 +31,22 @@ public:
     Treap() : root_(nullptr) {
     }
 
-/*
-	if (!t)
-		t = it;
-	else if (it->prior > t->prior)
-		split (t, it->key, it->l, it->r),  t = it;
-	else
-		insert (it->key < t->key ? t->l : t->r, it);
-
- */
-
-    void Insert (int val) {
-        auto pair = Split(root_, val);
+    void Insert(int val) {
+        auto splitted = Split(root_, val);
         NodePtr new_node = std::make_shared<Node>(val);
-        root_ = Merge(pair.first, Merge(new_node, pair.second));
+        root_ = Merge(Merge(splitted.left, new_node), splitted.right);
     }
 
     void Remove(int val) {
-        auto pair = Split(root_, val - 1);
-        auto pair_second = Split(pair.second, val);
-        std::cout << "Height: " << GetHeightImpl(pair_second.first) << std::endl;
-        root_ = Merge(pair.first, pair_second.second);
+        auto splitted = Split(root_, val);
+        if (splitted.elem) {
+            root_ = Merge(splitted.left, splitted.right);
+        }
     }
 
     NodePtr Find(int val) {
-        auto pair = Split(root_, val - 1);
-        return pair.second;
+        auto splitted = Split(root_, val - 1);
+        return splitted.elem;
     }
 
     void Print() const {
@@ -71,6 +61,12 @@ public:
         std::cout << std::endl;
     }
 private:
+    struct Splitted {
+        NodePtr left;
+        NodePtr elem;
+        NodePtr right;
+    };
+
     NodePtr Merge(NodePtr left, NodePtr right) {
         if (!left || !right) {
             return left ? left : right;
@@ -83,19 +79,26 @@ private:
         return right;
     }
 
-    std::pair<NodePtr, NodePtr> Split(NodePtr node, int val) {
+    Splitted Split(NodePtr node, int val) {
         if (!node) {
-            return {};
+            return {nullptr, nullptr, nullptr};
         }
-        if (node->key <= val) {
-            auto pair = Split(node->right, val);
-            node->right = pair.first;
-            return {node, pair.second};
+        if (node->key == val) {
+            Splitted splitted{node->left, node, node->right};
+            splitted.elem->left = nullptr;
+            splitted.elem->right = nullptr;
+            return splitted;
         }
-        auto pair = Split(node->left, val);
-        node->left = pair.second;
-        return {pair.first, node};
+        if (node->key < val) {
+            auto splitted = Split(node->right, val);
+            node->right = splitted.left;
+            return {node, splitted.elem, splitted.right};
+        }
+        auto splitted = Split(node->left, val);
+        node->left = splitted.right;
+        return {splitted.left, splitted.elem, node};
     }
+
     void PrintImpl(NodePtr node, std::string indent = "") const {
         if (!node) {
             return;
