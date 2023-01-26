@@ -19,13 +19,33 @@ TEST_CASE("Treap Height") {
 }
 
 TEST_CASE("Treap Insert") {
-    std::vector<int> data(5);
+    std::vector<int> data(15);
     std::iota(data.begin(), data.end(), 1);
 
     Treap treap;
 
     for (auto num : data) {
         treap.Insert(num);
+        treap.Insert(num);
+    }
+    treap.Print();
+    treap.PrintData();
+    treap.PrintData(treap.Find(1));
+    treap.PrintData(treap.Find(2));
+    treap.PrintData(treap.Find(3));
+    treap.PrintData(treap.Find(4));
+    treap.PrintData(treap.Find(5));
+    treap.PrintData(treap.Find(6));
+    // std::cout << treap.GetHeight() << std::endl;
+    REQUIRE(true);
+}
+
+TEST_CASE("Treap Insert 2") {
+    std::vector<int> data{1, 2, 2, 2, 2};
+
+    Treap treap;
+
+    for (auto num : data) {
         treap.Insert(num);
     }
     treap.Print();

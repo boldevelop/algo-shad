@@ -9,7 +9,7 @@
 std::mt19937 gen(738547485u);
 
 int GenRandomInt() {
-    std::uniform_int_distribution<int> dist(0, std::numeric_limits<int>::max());
+    std::uniform_int_distribution<int> dist(std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
     return dist(gen);
 }
 
@@ -31,6 +31,16 @@ public:
     Treap() : root_(nullptr) {
     }
 
+/*
+	if (!t)
+		t = it;
+	else if (it->prior > t->prior)
+		split (t, it->key, it->l, it->r),  t = it;
+	else
+		insert (it->key < t->key ? t->l : t->r, it);
+
+ */
+
     void Insert (int val) {
         auto pair = Split(root_, val);
         NodePtr new_node = std::make_shared<Node>(val);
@@ -49,11 +59,11 @@ public:
         // ? ? ? ? ? ?
         auto elem = root_;
         while (elem && elem->key != val) {
-            if (val > elem->key) {
-                elem = elem->right;
+            if (val < elem->key) {
+                elem = elem->left;
                 continue;
             }
-            elem = elem->left;
+            elem = elem->right;
         }
         return elem;
     }
@@ -64,6 +74,10 @@ public:
 
     int GetHeight() const {
         return GetHeightImpl(root_);
+    }
+    void PrintData(NodePtr node = nullptr) const {
+        PrintDataImpl(node ? node : root_);
+        std::cout << std::endl;
     }
 private:
     NodePtr Merge(NodePtr left, NodePtr right) {
@@ -77,6 +91,18 @@ private:
         right->left = Merge(left, right->left);
         return right;
     }
+    /*
+    void split (pitem t, int key, pitem & l, pitem & r) {
+	if (!t)
+		l = r = NULL;
+	else if (key < t->key)
+		split (t->l, key, l, t->l),  r = t;
+	else
+		split (t->r, key, t->r, r),  l = t;
+}
+
+
+     */
     std::pair<NodePtr, NodePtr> Split(NodePtr node, int val) {
         if (!node) {
             return {};
@@ -101,6 +127,14 @@ private:
         indent = indent == "" ? "'-> " : "    " + indent;
         PrintImpl(node->left, indent);
         PrintImpl(node->right, indent);
+    }
+    void PrintDataImpl(NodePtr node) const {
+        if (!node) {
+            return;
+        }
+        PrintDataImpl(node->left);
+        std::cout << node->key << " ";
+        PrintDataImpl(node->right);
     }
     int GetHeightImpl(NodePtr node) const {
         if (!node) {
