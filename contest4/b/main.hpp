@@ -5,6 +5,7 @@
 #include <string>
 #include <random>
 #include <numeric>
+#include <limits>
 #include <algorithm>
 
 std::mt19937 gen(738547485u);
@@ -14,6 +15,7 @@ int GenRandomInt() {
                                             std::numeric_limits<int>::max());
     return dist(gen);
 }
+
 namespace simple {
 class Treap {
     struct Node {
@@ -22,7 +24,8 @@ class Treap {
         std::shared_ptr<Node> left;
         std::shared_ptr<Node> right;
 
-        Node(int added_key) : key(added_key), prior(GenRandomInt()), left(nullptr), right(nullptr) {
+        explicit Node(int added_key)
+            : key(added_key), prior(GenRandomInt()), left(nullptr), right(nullptr) {
         }
     };
 
@@ -136,8 +139,8 @@ private:
         return 1 + std::max(left, right);
     }
 };
-}  // namespace simple
 
+}  // namespace simple
 
 struct Rect {
     bool ext;
@@ -151,9 +154,11 @@ struct Line {
     int y_pos;
     bool open;
     std::shared_ptr<Rect> rect;
+    bool point;
 
-    Line(int left, int right, int yy, bool is_open, std::shared_ptr<Rect> rect_ptr)
-        : lef(left), rig(right), y_pos(yy), open(is_open), rect(rect_ptr) {
+    Line(int left, int right, int yy, bool is_open, std::shared_ptr<Rect> rect_ptr,
+         bool is_point = false)
+        : lef(left), rig(right), y_pos(yy), open(is_open), rect(rect_ptr), point(is_point) {
     }
 
     bool IsExt() const {
@@ -167,6 +172,14 @@ struct Line {
     bool IsIn(Line* line) {
         return lef > line->lef;
     }
+
+    bool IsPoint() const {
+        return point;
+    }
+
+    void Print() const {
+        std::cout << lef << " " << rig << " " << y_pos << std::endl;
+    }
 };
 
 class Treap {
@@ -176,7 +189,8 @@ class Treap {
         std::shared_ptr<Node> left;
         std::shared_ptr<Node> right;
 
-        Node(Line* added_key) : key(added_key), prior(GenRandomInt()), left(nullptr), right(nullptr) {
+        explicit Node(Line* added_key)
+            : key(added_key), prior(GenRandomInt()), left(nullptr), right(nullptr) {
         }
     };
 
@@ -206,8 +220,19 @@ public:
 
     NodePtr UpperBound(int val) {
         auto splitted = Split(root_, val);
+        auto elem = splitted.right;
+        while (elem) {
+            if (!elem->left || (elem->left && elem->left->key->rig < val)) {
+                break;
+            }
+            elem = elem->left;
+        }
         root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
-        return splitted.right;
+        return elem;
+    }
+
+    void Print() const {
+        PrintImpl(root_);
     }
 
 private:
@@ -248,16 +273,35 @@ private:
         node->left = splitted.right;
         return {splitted.left, splitted.elem, node};
     }
+    void PrintImpl(NodePtr node, std::string indent = "") const {
+        if (!node) {
+            return;
+        }
+        if (node == root_) {
+            std::cout << "Treap\n";
+        }
+        std::cout << indent;
+        node->key->Print();
+        indent = indent.empty() ? "'-> " : "    " + indent;
+        PrintImpl(node->left, indent);
+        PrintImpl(node->right, indent);
+    }
 };
 
 void ProcessData(int xx, int yy, int xxx, int yyy, std::vector<std::shared_ptr<Rect>>* rects,
                  std::vector<Line>* lines) {
+    auto rect = std::make_shared<Rect>();
+    rects->push_back(rect);
+
+    if (xx == xxx && yy == yyy) {
+        lines->emplace_back(xx, xxx, yy, true, rect, true);
+        return;
+    }
     int lef = xx < xxx ? xx : xxx;
     int rig = xx < xxx ? xxx : xx;
     int top = yy < yyy ? yyy : yy;
     int bot = yy < yyy ? yy : yyy;
-    auto rect = std::make_shared<Rect>();
-    rects->push_back(rect);
+
     lines->emplace_back(lef, rig, bot, false, rect);
     lines->emplace_back(lef, rig, top, true, rect);
 }
@@ -273,17 +317,27 @@ int GetExternalRect(std::vector<Line>& lines) {
     Treap treap;
     int ext = 0;
 
-    for (int i = 0; i < static_cast<int>(lines.size()); ++i) {
-        auto& line = lines[i];
+    for (int ind = 0; ind < static_cast<int>(lines.size()); ++ind) {
+        auto& line = lines[ind];
         if (line.open) {
             auto node = treap.UpperBound(line.rig);
             if (!node) {
-                line.SetExt();
-                treap.Insert(&lines[i]);
+                if (!line.IsPoint()) {
+                    line.SetExt();
+                    treap.Insert(&lines[ind]);
+                }
                 ++ext;
+            } else {
+                if (!line.IsIn(node->key)) {
+                    if (!line.IsPoint()) {
+                        line.SetExt();
+                        treap.Insert(&lines[ind]);
+                    }
+                    ++ext;
+                }
             }
         } else if (line.IsExt()) {
-            treap.Remove(&lines[i]);
+            treap.Remove(&lines[ind]);
         }
     }
     return ext;
@@ -308,13 +362,17 @@ int main() {
     int count;
     std::cin >> count;
 
-    std::vector<Rect> data;
+    std::vector<std::shared_ptr<Rect>> rects;
+    std::vector<Line> lines;
+
     while (count > 0) {
-        int x1, y1, x2, y2;
-        std::cin >> x1 >> y1 >> x2 >> y2;
+        int xx, yy, xxx, yyy;
+        std::cin >> xx >> yy >> xxx >> yyy;
+        ProcessData(xx, yy, xxx, yyy, &rects, &lines);
+        --count;
     }
 
-    // std::cout << GetExternalRect(data) << '\n';
+    std::cout << GetExternalRect(lines) << '\n';
     return 0;
 }
 

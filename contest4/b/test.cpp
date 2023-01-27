@@ -99,6 +99,15 @@ TEST_CASE("Пример 2") {
     REQUIRE(GetExternalRect(data) == 3);
 }
 
+TEST_CASE("Пример 2.1") {
+    Data data{
+        {0, 0, 3, 3},
+        {-1, 2, -2, 1},
+    };
+
+    REQUIRE(GetExternalRect(data) == 2);
+}
+
 TEST_CASE("Пример 3") {
     int max_rect = 100'000;
     int big = 1'000'000'000;
@@ -151,23 +160,23 @@ TEST_CASE("Пример 3") {
     }
     SECTION("Все внутри 2") {
         Data data;
-        int y1 = 0;
-        int y2 = big;
+        int yy1 = 0;
+        int yy2 = big;
 
         int xx1 = -big;
         int xx2 = -1;
-        data.push_back({xx1, y1, xx2, y2});
+        data.push_back({xx1, yy1, xx2, yy2});
         for (int i = 0; i < max_rect / 2 - 1; ++i) {
             auto inc = i + 1;
-            data.push_back({xx1 + inc, y1 + inc, xx2 - inc, y2 - inc});
+            data.push_back({xx1 + inc, yy1 + inc, xx2 - inc, yy2 - inc});
         }
 
         xx1 = 0;
         xx2 = big;
-        data.push_back({xx1, y1, xx2, y2});
+        data.push_back({xx1, yy1, xx2, yy2});
         for (int i = 0; i < max_rect / 2 - 1; ++i) {
             auto inc = i + 1;
-            data.push_back({xx1 + inc, y1 + inc, xx2 - inc, y2 - inc});
+            data.push_back({xx1 + inc, yy1 + inc, xx2 - inc, yy2 - inc});
         }
 
         Log l;
@@ -176,4 +185,125 @@ TEST_CASE("Пример 3") {
         std::cout << "Пример 3 Все внутри 2: " << dur << std::endl;
         REQUIRE(answer == 2);
     }
+}
+
+// (Вырожденные)
+TEST_CASE("Пример 4") {
+    SECTION("Внутри линии") {
+        {
+            Data data{
+                {0, 0, 3, 3},
+                {1, 2, 2, 2},
+                {1, 1, 2, 1}
+            };
+            REQUIRE(GetExternalRect(data) == 1);
+        }
+        {
+            Data data{
+                {0, 0, 3, 3},
+                {1, 1, 1, 2},
+                {2, 1, 2, 2}
+            };
+            REQUIRE(GetExternalRect(data) == 1);
+        }
+    }
+    SECTION("Снаружи линии") {
+        {
+            Data data{
+                {0, 0, 3, 3},
+                {4, 2, 5, 2},
+                {4, 1, 5, 1}
+            };
+            REQUIRE(GetExternalRect(data) == 3);
+        };
+        {
+            Data data{
+                {0, 0, 3, 3},
+                {4, 2, 4, 1},
+                {5, 1, 5, 2}
+            };
+            REQUIRE(GetExternalRect(data) == 3);
+        };
+    }
+    SECTION("Внутри точки") {
+        Data data{
+            {0, 0, 3, 3},
+            {1, 1, 1, 1},
+            {2, 2, 2, 2},
+            {1, 2, 1, 2},
+            {2, 2, 2, 2}
+        };
+        REQUIRE(GetExternalRect(data) == 1);
+    }
+    SECTION("Снаружи точки") {
+        {
+            Data data{
+                {0, 0, 3, 3},
+                {4, 1, 4, 1},
+                {5, 2, 5, 2},
+                {4, 2, 4, 2},
+                {5, 2, 5, 2}
+            };
+            REQUIRE(GetExternalRect(data) == 5);
+        }
+        {
+            Data data{
+                {0, 0, 3, 3},
+                /* внешние */
+                {-1, -1, -1, -1},
+                {-1, 0, -1, 0},
+                {-1, 1, -1, 1},
+                {-1, 2, -1, 2},
+                {-1, 3, -1, 3},
+                {-1, 4, -1, 4},
+
+                {4, -1, 4, -1},
+                {4, 0, 4, 0},
+                {4, 1, 4, 1},
+                {4, 2, 4, 2},
+                {4, 3, 4, 3},
+                {4, 4, 4, 4},
+
+                {0, 4, 0, 4},
+                {1, 4, 1, 4},
+                {2, 4, 2, 4},
+                {3, 4, 3, 4},
+
+                {0, -1, 0, -1},
+                {1, -1, 1, -1},
+                {2, -1, 2, -1},
+                {3, -1, 3, -1},
+                /* внутри */
+                {1, 1, 1, 1},
+                {2, 2, 2, 2},
+                {1, 2, 1, 2},
+                {2, 2, 2, 2}
+            };
+            REQUIRE(GetExternalRect(data) == 21);
+        }
+    }
+    SECTION("Снаружи/внутри точки") {
+        Data data{
+            {0, 0, 3, 3},
+            {1, 1, 1, 1}, // внутри
+            {2, 2, 2, 2}, // внутри
+            {4, 2, 4, 2}, // снаружи
+            {5, 2, 5, 2}  // снаружи
+        };
+        REQUIRE(GetExternalRect(data) == 3);
+    }
+
+    SECTION("точки линии") {
+        Data data{
+            {0, 0, 3, 3},
+            {1, 2, 2, 2},
+            {4, 1, 5, 1}, // снаружи линия
+            {1, 1, 1, 1}, // внутри точка
+            {1, 2, 1, 2}, // внутри точка
+            {4, 2, 4, 2}, // снаружи точка
+            {5, 2, 5, 2}  // снаружи точка
+        };
+        REQUIRE(GetExternalRect(data) == 4);
+    }
+
 }
