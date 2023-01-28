@@ -31,6 +31,9 @@ add_task(3 e)
 add_task(4 a)
 add_task(4 b)
 add_task(4 c)
+add_task(4 d)
+
+add_task(7 b)
 
 # set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 # set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
