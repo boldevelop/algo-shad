@@ -107,46 +107,6 @@ void Correctness(Set<T>& set, std::vector<T>& data) {
 }
 
 TEST_CASE("set") {
-    // SECTION("Correctness") {
-    //     std::vector<int> data(15);
-    //     std::iota(data.begin(), data.end(), 1);
-    //     RandomGenerator RandGen;
-
-    //     for (int i = 0; i < 5; ++i) {
-    //         Set<int> set;
-
-    //         for (auto num : data) {
-    //             set.insert(num);
-    //             REQUIRE(set.find(num) == num);
-    //             if (i == 0) {
-    //                 REQUIRE(set.lower_bound(num) == num);
-    //                 REQUIRE(set.lower_bound(num + 1) == -1);
-    //                 if (num == 1) {
-    //                     REQUIRE(set.lower_bound(num - 1) == num);
-    //                 } else {
-    //                     REQUIRE(set.lower_bound(num - 1) == num - 1);
-    //                 }
-    //             }
-    //         }
-
-    //         for (auto num : data) {
-    //             REQUIRE(set.find(num + 15) == -1);
-    //             REQUIRE(set.find(num) == num);
-    //             REQUIRE(set.find(num - 15) == - 1);
-    //             set.erase(num + 16);
-    //         }
-
-    //         int size = 14;
-    //         for (auto num : data) {
-    //             set.erase(num);
-    //             REQUIRE(set.find(num) == -1);
-    //             REQUIRE(set.size() == size--);
-    //         }
-    //         REQUIRE(set.empty());
-    //         RandGen.Shuffle(data.begin(), data.end());
-    //     }
-    // }
-
     SECTION("Correctness init list") {
         std::vector<int> data(15);
         std::iota(data.begin(), data.end(), 1);
@@ -160,6 +120,29 @@ TEST_CASE("set") {
         Set<int> set(data.begin(), data.end());
         Correctness(set, data);
     }
+
+    SECTION("iterator list") {
+        std::vector<int> data(7);
+        std::iota(data.begin(), data.end(), 1);
+        do {
+            Set<int> set(data.begin(), data.end());
+            auto beg = set.begin();
+            auto end = set.end();
+
+            auto sorted = data;
+            std::sort(sorted.begin(), sorted.end());
+
+            auto sorted_it = sorted.begin();
+            while (beg != end && sorted_it != sorted.end()) {
+                REQUIRE((*beg) == *sorted_it);
+                ++beg;
+                ++sorted_it;
+            }
+            if (sorted_it != sorted.end() || beg != end) {
+                REQUIRE(false);
+            }
+        } while (std::next_permutation(data.begin(), data.end()));
+    }
 }
 
 TEST_CASE("set copy") {
@@ -170,6 +153,7 @@ TEST_CASE("set copy") {
     s2.insert(18);
     s2.insert(-2);
 
+    /* need real copy */
     REQUIRE(s1.find(5) == -1);
     REQUIRE(s1.find(18) == -1);
     REQUIRE(s1.find(-2) == -1);

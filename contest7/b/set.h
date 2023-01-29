@@ -7,6 +7,7 @@
 #include <numeric>
 #include <limits>
 #include <algorithm>
+#include <sstream>
 
 std::mt19937 gen(738547485u);
 
@@ -15,39 +16,24 @@ int GenRandomInt() {
                                             std::numeric_limits<int>::max());
     return dist(gen);
 }
-/*
-void printHelper(NodePtr root, string indent, bool last) {
-    // print the tree structure on the screen
-    if (root != nullptr) {
-        cout<<indent;
-        if (last) {
-            cout<<"└────";
-            indent += "     ";
-        } else {
-            cout<<"├────";
-            indent += "|    ";
-        }
 
-        cout<<root->data<<"("<<root->priority<<")"<<endl;
 
-        printHelper(root->left, indent, false);
-        printHelper(root->right, indent, true);
-    }
-}
- */
 class Treap {
     struct Node {
         int key;
         int prior;
         std::shared_ptr<Node> left;
         std::shared_ptr<Node> right;
+        std::weak_ptr<Node> parent;
 
         explicit Node(int added_key)
-            : key(added_key), prior(GenRandomInt()), left(nullptr), right(nullptr) {
+            : key(added_key), prior(GenRandomInt()), left(nullptr), right(nullptr), parent() {
         }
     };
-
+public:
     using NodePtr = std::shared_ptr<Node>;
+
+private:
     NodePtr root_;
     int size_;
 
@@ -64,6 +50,7 @@ public:
         } else {
             root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
         }
+        UpdateParent(root_);
     }
 
     void Remove(int val) {
@@ -72,17 +59,34 @@ public:
         if (splitted.elem) {
             --size_;
         }
+        UpdateParent(root_);
     }
 
     NodePtr Find(int val) {
         auto splitted = Split(root_, val);
         root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
+        UpdateParent(root_);
         return splitted.elem;
+    }
+    NodePtr FindMin(NodePtr node = nullptr) const {
+        node = node ? node : root_;
+        while (node->left) {
+            node = node->left;
+        }
+        return node;
+    }
+    NodePtr FindMax(NodePtr node = nullptr) const {
+        node = node ? node : root_;
+        while (node->right) {
+            node = node->right;
+        }
+        return node;
     }
 
     NodePtr LowerBound(int val) {
         auto splitted = Split(root_, val);
         root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
+        UpdateParent(root_);
         if (splitted.elem) {
             return splitted.elem;
         }
@@ -102,6 +106,7 @@ public:
     NodePtr UpperBound(int val) {
         auto splitted = Split(root_, val);
         root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
+        UpdateParent(root_);
         auto elem = splitted.right;
         while (elem) {
             if (!elem->left || (elem->left && elem->left->key < val)) {
@@ -137,15 +142,31 @@ private:
         NodePtr right;
     };
 
+    void UpdateParent(NodePtr& parent) {
+        if (parent) {
+            if (parent->left) {
+                parent->left->parent = parent;
+            }
+            if (parent->right) {
+                parent->right->parent = parent;
+            }
+        }
+    }
+
+    void AssignNode(NodePtr& parent, NodePtr child) {
+        parent = child;
+        UpdateParent(parent);
+    }
+
     NodePtr Merge(NodePtr left, NodePtr right) {
         if (!left || !right) {
             return left ? left : right;
         }
         if (left->prior > right->prior) {
-            left->right = Merge(left->right, right);
+            AssignNode(left->right, Merge(left->right, right));
             return left;
         }
-        right->left = Merge(left, right->left);
+        AssignNode(right->left, Merge(left, right->left));
         return right;
     }
 
@@ -154,6 +175,12 @@ private:
             return {nullptr, nullptr, nullptr};
         }
         if (node->key == val) {
+            // if (node->left) {
+            //     node->left->parent = std::weak_ptr<Node>();
+            // }
+            // if (node->right) {
+            //     node->right->parent = std::weak_ptr<Node>();
+            // }
             Splitted splitted{node->left, node, node->right};
             splitted.elem->left = nullptr;
             splitted.elem->right = nullptr;
@@ -161,22 +188,46 @@ private:
         }
         if (node->key < val) {
             auto splitted = Split(node->right, val);
-            node->right = splitted.left;
+            AssignNode(node->right, splitted.left);
+            // if (splitted.right) {
+            //     splitted.right->parent = std::weak_ptr<Node>();
+            // }
             return {node, splitted.elem, splitted.right};
         }
         auto splitted = Split(node->left, val);
-        node->left = splitted.right;
+        AssignNode(node->left, splitted.right);
+        // if (splitted.left) {
+        //     splitted.left->parent = std::weak_ptr<Node>();
+        // }
         return {splitted.left, splitted.elem, node};
+    }
+
+    std::string GetAddr(NodePtr node) const {
+        std::stringstream ssstream;
+        ssstream << node.get();
+        std::string addr = ssstream.str();
+        return addr.substr(addr.size() - 6);
+    }
+
+    void PrintParent(NodePtr node) const {
+        std::cout << GetAddr(node);
+        auto parent = node->parent.lock();
+        if (parent) {
+            std::cout << ", " << GetAddr(parent);
+        }
     }
 
     void PrintImpl(NodePtr node, std::string indent = "") const {
         if (!node) {
+            std::cout << indent << "X" << '\n';
             return;
         }
         if (node == root_) {
             std::cout << "Treap\n";
         }
-        std::cout << indent << node->key << " (" << node->prior << ')' << '\n';
+        std::cout << indent << node->key << " (";
+        PrintParent(node);
+        std::cout << ')' << '\n';
         indent = indent.empty() ? "'-> " : "    " + indent;
         PrintImpl(node->left, indent);
         PrintImpl(node->right, indent);
@@ -201,19 +252,77 @@ private:
 
 template<class ValueType>
 class Set {
-    Treap treap_;
+    mutable Treap treap_;
 
 public:
-/*
-In a binary tree, to do operator++.
+    class BstIterator : public std::iterator<std::bidirectional_iterator_tag, const ValueType> {
+    private:
+        friend class Set<ValueType>;
+        Treap::NodePtr node_;
+        const Treap* treap_;
 
-We need to know not only where we are,
+        BstIterator (Treap::NodePtr node, const Treap* treap) : node_(node), treap_(treap) {
+        }
+    public:
+        BstIterator() : node_(), treap_() {
+        }
+        bool operator==(const BstIterator& rhs) const {
+            return node_ == rhs.node_;
+        }
+        bool operator!=(const BstIterator& rhs) const {
+            return !(*this == rhs);
+        }
+        const ValueType& operator*() const {
+            return node_->key;
+        }
+        BstIterator& operator++() {
+            if (node_->right) {
+                node_ = node_->right;
+                node_ = treap_->FindMin(node_);
+            } else {
+                Treap::NodePtr parent = node_->parent.lock();
+                while (parent && node_ == parent->right) {
+                    node_ = parent;
+                    parent = parent->parent.lock();
+                }
+                node_ = parent;
+            }
 
-but also how we got here.
- */
-    class iterator {
-
+            return *this;
+        }
+        BstIterator operator++(int) {
+            BstIterator result(*this);
+            ++(*this);
+            return result;
+        }
+        BstIterator operator--() {
+            if (!node_) {
+                node_ = treap_->FindMax();
+            } else {
+                if (node_->left) {
+                    node_ = node_->left;
+                    node_ = treap_->FindMax(node_);
+                } else {
+                    Treap::NodePtr parent;
+                    parent = node_->parent.lock();
+                    while (parent && node_ == parent->left) {
+                            node_ = parent;
+                            parent = parent->parent.lock();
+                    }
+                    node_ = parent;
+                }
+            }
+            return *this;
+        }
+        BstIterator operator--(int) {
+            BstIterator result(*this);
+            --(*this);
+            return result;
+        }
     };
+
+    using const_iterator = BstIterator;
+    using iterator = const_iterator;
 
     Set() : treap_() {
     }
@@ -244,19 +353,11 @@ but also how we got here.
     void erase(ValueType elem) {
         treap_.Remove(elem);
     }
-    ValueType find(ValueType elem) {
-        auto node = treap_.Find(elem);
-        if (node) {
-            return elem;
-        }
-        return -1;
+    const_iterator find(ValueType elem) const {
+        return BstIterator(treap_.Find(elem), &treap_);
     }
-    ValueType lower_bound(ValueType elem) {
-        auto node = treap_.LowerBound(elem);
-        if (node) {
-            return node->key;
-        }
-        return -1;
+    const_iterator lower_bound(ValueType elem) const {
+        return BstIterator(treap_.LowerBound(elem), &treap_);
     }
 
     void Print() {
@@ -264,6 +365,10 @@ but also how we got here.
         treap_.PrintData();
     }
 
-    iterator begin() const;
-    iterator end() const;
+    const_iterator begin() const {
+        return BstIterator(treap_.FindMin(), &treap_);
+    };
+    const_iterator end() const {
+        return BstIterator(nullptr, &treap_);
+    }
 };
