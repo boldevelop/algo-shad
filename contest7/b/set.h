@@ -339,7 +339,6 @@ public:
 
     Set() : treap_() {
     }
-
     template <class Iter>
     Set(Iter begin, Iter end) : treap_() {
         while (begin != end) {
@@ -350,16 +349,22 @@ public:
     Set(std::initializer_list<ValueType> list) : Set(list.begin(), list.end()) {
     }
 
-    /* нужен итератор */
-    // Set(const Set<ValueType>& src);
-    // Set<ValueType> operator=(const Set<ValueType>& src);
+    Set(const Set<ValueType>& src) {
+        Tree treap;
+        for (auto elem : src) {
+            treap.Insert(elem);
+        }
+        treap_ = treap;
+    }
+    Set<ValueType> operator=(const Set<ValueType>& src) {
+        Tree treap;
+        for (auto elem : src) {
+            treap.Insert(elem);
+        }
+        treap_ = treap;
+        return *this;
+    }
 
-    int size() const {
-        return treap_.Size();
-    }
-    bool empty() const {
-        return treap_.Empty();
-    }
     void insert(ValueType elem) {
         treap_.Insert(elem);
     }
@@ -372,16 +377,21 @@ public:
     const_iterator lower_bound(ValueType elem) const {
         return BstIterator(treap_.LowerBound(elem), &treap_);
     }
-
-    void Print() const {
-        treap_.Print();
-        treap_.PrintData();
-    }
-
     const_iterator begin() const {
         return BstIterator(treap_.FindMin(), &treap_);
     };
     const_iterator end() const {
         return BstIterator(nullptr, &treap_);
+    }
+    int size() const {
+        return treap_.Size();
+    }
+    bool empty() const {
+        return treap_.Empty();
+    }
+
+    void Print() const {
+        treap_.Print();
+        treap_.PrintData();
     }
 };
