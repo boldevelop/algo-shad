@@ -15,7 +15,26 @@ int GenRandomInt() {
                                             std::numeric_limits<int>::max());
     return dist(gen);
 }
+/*
+void printHelper(NodePtr root, string indent, bool last) {
+    // print the tree structure on the screen
+    if (root != nullptr) {
+        cout<<indent;
+        if (last) {
+            cout<<"└────";
+            indent += "     ";
+        } else {
+            cout<<"├────";
+            indent += "|    ";
+        }
 
+        cout<<root->data<<"("<<root->priority<<")"<<endl;
+
+        printHelper(root->left, indent, false);
+        printHelper(root->right, indent, true);
+    }
+}
+ */
 class Treap {
     struct Node {
         int key;
@@ -33,26 +52,51 @@ class Treap {
     int size_;
 
 public:
-    Treap() : root_(nullptr) {
+    Treap() : root_(nullptr), size_(0) {
     }
 
     void Insert(int val) {
         auto splitted = Split(root_, val);
-        NodePtr new_node = std::make_shared<Node>(val);
-        root_ = Merge(Merge(splitted.left, new_node), splitted.right);
-        ++size_;
+        if (!splitted.elem) {
+            NodePtr new_node = std::make_shared<Node>(val);
+            root_ = Merge(Merge(splitted.left, new_node), splitted.right);
+            ++size_;
+        } else {
+            root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
+        }
     }
 
     void Remove(int val) {
         auto splitted = Split(root_, val);
         root_ = Merge(splitted.left, splitted.right);
-        --size_;
+        if (splitted.elem) {
+            --size_;
+        }
     }
 
     NodePtr Find(int val) {
         auto splitted = Split(root_, val);
         root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
         return splitted.elem;
+    }
+
+    NodePtr LowerBound(int val) {
+        auto splitted = Split(root_, val);
+        root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
+        if (splitted.elem) {
+            return splitted.elem;
+        }
+        if (splitted.right) {
+            auto elem = splitted.right;
+            while (elem) {
+                if (!elem->left || (elem->left && elem->left->key <= val)) {
+                    break;
+                }
+                elem = elem->left;
+            }
+            return elem;
+        }
+        return nullptr;
     }
 
     NodePtr UpperBound(int val) {
@@ -78,6 +122,12 @@ public:
     void PrintData(NodePtr node = nullptr) const {
         PrintDataImpl(node ? node : root_);
         std::cout << std::endl;
+    }
+    int Size() const {
+        return size_;
+    }
+    bool Empty() const {
+        return size_ == 0;
     }
 
 private:
@@ -151,22 +201,69 @@ private:
 
 template<class ValueType>
 class Set {
+    Treap treap_;
+
 public:
+/*
+In a binary tree, to do operator++.
+
+We need to know not only where we are,
+
+but also how we got here.
+ */
     class iterator {
 
     };
 
-    Set();
-    template<class Iter>
-    Set(Iter begin, Iter end);
-    Set(std::initializer_list<ValueType> list);
-    Set(const Set<ValueType>& src);
-    Set<ValueType> operator=(const Set<ValueType>& src);
-    int size() const;
-    bool empty() const;
-    void insert(ValueType elem);
-    void erase(ValueType elem);
+    Set() : treap_() {
+    }
 
-    iterator begin();
-    iterator end();
+    template<class Iter>
+    Set(Iter begin, Iter end) : treap_() {
+        while (begin != end) {
+            insert(*begin);
+            begin = std::next(begin);
+        }
+    }
+    Set(std::initializer_list<ValueType> list) : Set(list.begin(), list.end()) {
+    }
+
+    /* нужен итератор */
+    // Set(const Set<ValueType>& src);
+    // Set<ValueType> operator=(const Set<ValueType>& src);
+
+    int size() const {
+        return treap_.Size();
+    }
+    bool empty() const {
+        return treap_.Empty();
+    }
+    void insert(ValueType elem) {
+        treap_.Insert(elem);
+    }
+    void erase(ValueType elem) {
+        treap_.Remove(elem);
+    }
+    ValueType find(ValueType elem) {
+        auto node = treap_.Find(elem);
+        if (node) {
+            return elem;
+        }
+        return -1;
+    }
+    ValueType lower_bound(ValueType elem) {
+        auto node = treap_.LowerBound(elem);
+        if (node) {
+            return node->key;
+        }
+        return -1;
+    }
+
+    void Print() {
+        treap_.Print();
+        treap_.PrintData();
+    }
+
+    iterator begin() const;
+    iterator end() const;
 };

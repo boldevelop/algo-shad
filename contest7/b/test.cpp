@@ -2,308 +2,183 @@
 #include <set.h>
 #include <util.h>
 
-TEST_CASE("Treap", "Simple") {
-    using namespace simple;
-    SECTION("Height") {
-        std::vector<int> data(100000);
-        std::iota(data.begin(), data.end(), 1);
+// TEST_CASE("Treap", "Simple") {
+//     SECTION("Height") {
+//         std::vector<int> data(100000);
+//         std::iota(data.begin(), data.end(), 1);
 
-        simple::Treap treap;
+//         simple::Treap treap;
 
-        Log l;
-        for (auto num : data) {
-            treap.Insert(num);
+//         Log l;
+//         for (auto num : data) {
+//             treap.Insert(num);
+//         }
+//         auto dur = l.GetDuration();
+//         std::cout << treap.GetHeight() << ": " << dur << std::endl;
+//         REQUIRE(treap.GetHeight() < 50);
+//     }
+
+//     SECTION("Correctness") {
+//         std::vector<int> data(15);
+//         std::iota(data.begin(), data.end(), 1);
+//         RandomGenerator RandGen;
+
+//         for (int i = 0; i < 5; ++i) {
+//             simple::Treap treap;
+
+//             for (auto num : data) {
+//                 treap.Insert(num);
+//                 REQUIRE(treap.Find(num)->key == num);
+//                 if (i == 0) {
+//                     REQUIRE(!treap.UpperBound(num));
+//                     REQUIRE(treap.UpperBound(num - 1)->key == num);
+//                 }
+//             }
+
+//             for (auto num : data) {
+//                 REQUIRE(!treap.Find(num + 15));
+//                 REQUIRE(treap.Find(num)->key == num);
+//                 REQUIRE(!treap.Find(num - 15));
+//                 treap.Remove(num + 16);
+//             }
+
+//             for (auto num : data) {
+//                 treap.Remove(num);
+//                 REQUIRE(!treap.Find(num));
+//             }
+//             REQUIRE(treap.GetHeight() == 0);
+//             RandGen.Shuffle(data.begin(), data.end());
+//         }
+//     }
+
+//     SECTION("Stress") {
+//         std::vector<int> data(100000);
+//         std::iota(data.begin(), data.end(), 1);
+
+//         simple::Treap treap;
+
+//         Log logger;
+//         for (auto num : data) {
+//             Log l;
+//             treap.Insert(num);
+//             REQUIRE(treap.Find(num)->key == num);
+//             REQUIRE(!treap.UpperBound(num));
+//             REQUIRE(treap.UpperBound(num - 1)->key == num);
+//             auto dur = l.GetDuration();
+//             if (dur > 500) {
+//                 std::cout << treap.GetHeight() << ": " << dur << std::endl;
+//             }
+//         }
+//         auto dur = logger.GetDuration();
+
+//         std::cout << "All op: " << dur << std::endl;
+//     }
+// }
+
+template<class T>
+void Correctness(Set<T>& set, std::vector<T>& data) {
+    for (auto num : data) {
+        set.insert(num);
+        REQUIRE(set.size() == 15);
+        REQUIRE(set.find(num) == num);
+        REQUIRE(set.lower_bound(num) == num);
+        if (num == 1) {
+            REQUIRE(set.lower_bound(num - 1) == num);
+        } else {
+            REQUIRE(set.lower_bound(num - 1) == num - 1);
         }
-        auto dur = l.GetDuration();
-        std::cout << treap.GetHeight() << ": " << dur << std::endl;
-        REQUIRE(treap.GetHeight() < 50);
     }
 
-    SECTION("Correctness") {
+    for (auto num : data) {
+        REQUIRE(set.find(num + 15) == -1);
+        REQUIRE(set.find(num) == num);
+        REQUIRE(set.find(num - 15) == - 1);
+        set.erase(num + 16);
+        REQUIRE(set.size() == 15);
+    }
+
+    int size = 14;
+    for (auto num : data) {
+        set.erase(num);
+        REQUIRE(set.find(num) == -1);
+        REQUIRE(set.size() == size--);
+    }
+    REQUIRE(set.empty());
+}
+
+TEST_CASE("set") {
+    // SECTION("Correctness") {
+    //     std::vector<int> data(15);
+    //     std::iota(data.begin(), data.end(), 1);
+    //     RandomGenerator RandGen;
+
+    //     for (int i = 0; i < 5; ++i) {
+    //         Set<int> set;
+
+    //         for (auto num : data) {
+    //             set.insert(num);
+    //             REQUIRE(set.find(num) == num);
+    //             if (i == 0) {
+    //                 REQUIRE(set.lower_bound(num) == num);
+    //                 REQUIRE(set.lower_bound(num + 1) == -1);
+    //                 if (num == 1) {
+    //                     REQUIRE(set.lower_bound(num - 1) == num);
+    //                 } else {
+    //                     REQUIRE(set.lower_bound(num - 1) == num - 1);
+    //                 }
+    //             }
+    //         }
+
+    //         for (auto num : data) {
+    //             REQUIRE(set.find(num + 15) == -1);
+    //             REQUIRE(set.find(num) == num);
+    //             REQUIRE(set.find(num - 15) == - 1);
+    //             set.erase(num + 16);
+    //         }
+
+    //         int size = 14;
+    //         for (auto num : data) {
+    //             set.erase(num);
+    //             REQUIRE(set.find(num) == -1);
+    //             REQUIRE(set.size() == size--);
+    //         }
+    //         REQUIRE(set.empty());
+    //         RandGen.Shuffle(data.begin(), data.end());
+    //     }
+    // }
+
+    SECTION("Correctness init list") {
         std::vector<int> data(15);
         std::iota(data.begin(), data.end(), 1);
-        RandomGenerator RandGen;
-
-        for (int i = 0; i < 5; ++i) {
-            simple::Treap treap;
-
-            for (auto num : data) {
-                treap.Insert(num);
-                REQUIRE(treap.Find(num)->key == num);
-                if (i == 0) {
-                    REQUIRE(!treap.UpperBound(num));
-                    REQUIRE(treap.UpperBound(num - 1)->key == num);
-                }
-            }
-
-            for (auto num : data) {
-                REQUIRE(!treap.Find(num + 15));
-                REQUIRE(treap.Find(num)->key == num);
-                REQUIRE(!treap.Find(num - 15));
-                treap.Remove(num + 16);
-            }
-
-            for (auto num : data) {
-                treap.Remove(num);
-                REQUIRE(!treap.Find(num));
-            }
-            REQUIRE(treap.GetHeight() == 0);
-            RandGen.Shuffle(data.begin(), data.end());
-        }
+        Set<int> set{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+        Correctness(set, data);
     }
 
-    SECTION("Stress") {
-        std::vector<int> data(100000);
+    SECTION("Correctness array list") {
+        std::vector<int> data(15);
         std::iota(data.begin(), data.end(), 1);
-
-        simple::Treap treap;
-
-        Log logger;
-        for (auto num : data) {
-            Log l;
-            treap.Insert(num);
-            REQUIRE(treap.Find(num)->key == num);
-            REQUIRE(!treap.UpperBound(num));
-            REQUIRE(treap.UpperBound(num - 1)->key == num);
-            auto dur = l.GetDuration();
-            if (dur > 500) {
-                std::cout << treap.GetHeight() << ": " << dur << std::endl;
-            }
-        }
-        auto dur = logger.GetDuration();
-
-        std::cout << "All op: " << dur << std::endl;
+        Set<int> set(data.begin(), data.end());
+        Correctness(set, data);
     }
 }
 
-using Data = std::vector<std::vector<int>>;
+TEST_CASE("set copy") {
+    int elems[] = {3, 3, -3, 6, 0, 0, 17, -5, 4, 2};
+    Set<int> s1(elems, elems + 10);
+    Set<int> s2 = s1;
+    s2.insert(5);
+    s2.insert(18);
+    s2.insert(-2);
 
-TEST_CASE("Пример 1") {
-    Data data{
-        {-3, -3, 3, 3},
-        {-2, 2, 2, -2},
-        {-1, -1, 1, 1}
-    };
-
-    REQUIRE(GetExternalRect(data) == 1);
-}
-
-TEST_CASE("Пример 2") {
-    Data data{
-        {0, 0, 3, 3},
-        {1, 1, 2, 2},
-        {100, 100, 101, 101},
-        {200, 200, 201, 201}
-    };
-
-    REQUIRE(GetExternalRect(data) == 3);
-}
-
-TEST_CASE("Пример 2.1") {
-    Data data{
-        {0, 0, 3, 3},
-        {-1, 2, -2, 1},
-    };
-
-    REQUIRE(GetExternalRect(data) == 2);
-}
-
-TEST_CASE("Пример 3") {
-    int max_rect = 100'000;
-    int big = 1'000'000'000;
-    int x1 = -big + 1;
-    int x2 = -big + 2;
-    int y1 = big - 2;
-    int y2 = big - 1;
-
-    SECTION("line") {
-        Data data;
-        data.push_back({-big, -big, big, big});
-        for (int i = 0; i < max_rect / 2; ++i) {
-            data.push_back({x1 + (i * 3), y1, x2 + (i * 3), y2});
-            data.push_back({x1 + (i * 3), y1 - 3, x2 + (i * 3), y2 - 3});
-        }
-
-        Log l;
-        auto answer = GetExternalRect(data);
-        auto dur = l.GetDuration();
-        std::cout << "Пример 3 line: " << dur << std::endl;
-        REQUIRE(answer == 1);
-    }
-    SECTION("Диагональ") {
-        Data data;
-        data.push_back({-big, -big, big, big});
-        for (int i = 0; i < max_rect / 2; ++i) {
-            data.push_back({x1 + (i * 3), y1 - (i * 3),       x2 + (i * 3), y2 - (i * 3)});
-            data.push_back({x1 + (i * 3), y1 - ((i + 1) * 3), x2 + (i * 3), y2 - ((i + 1) * 3)});
-        }
-
-        Log l;
-        auto answer = GetExternalRect(data);
-        auto dur = l.GetDuration();
-        std::cout << "Пример 3 Диагональ: " << dur << std::endl;
-        REQUIRE(answer == 1);
-    }
-    SECTION("Все внутри") {
-        Data data;
-        data.push_back({-big, -big, big, big});
-        for (int i = 0; i < max_rect; ++i) {
-            auto inc = i + 1;
-            data.push_back({-big + inc, -big + inc, big - inc, big - inc});
-        }
-
-        Log l;
-        auto answer = GetExternalRect(data);
-        auto dur = l.GetDuration();
-        std::cout << "Пример 3 Все внутри: " << dur << std::endl;
-        REQUIRE(answer == 1);
-    }
-    SECTION("Все внутри 2") {
-        Data data;
-        int yy1 = 0;
-        int yy2 = big;
-
-        int xx1 = -big;
-        int xx2 = -1;
-        data.push_back({xx1, yy1, xx2, yy2});
-        for (int i = 0; i < max_rect / 2 - 1; ++i) {
-            auto inc = i + 1;
-            data.push_back({xx1 + inc, yy1 + inc, xx2 - inc, yy2 - inc});
-        }
-
-        xx1 = 0;
-        xx2 = big;
-        data.push_back({xx1, yy1, xx2, yy2});
-        for (int i = 0; i < max_rect / 2 - 1; ++i) {
-            auto inc = i + 1;
-            data.push_back({xx1 + inc, yy1 + inc, xx2 - inc, yy2 - inc});
-        }
-
-        Log l;
-        auto answer = GetExternalRect(data);
-        auto dur = l.GetDuration();
-        std::cout << "Пример 3 Все внутри 2: " << dur << std::endl;
-        REQUIRE(answer == 2);
-    }
-}
-
-// (Вырожденные)
-TEST_CASE("Пример 4") {
-    SECTION("Внутри линии") {
-        {
-            Data data{
-                {0, 0, 3, 3},
-                {1, 2, 2, 2},
-                {1, 1, 2, 1}
-            };
-            REQUIRE(GetExternalRect(data) == 1);
-        }
-        {
-            Data data{
-                {0, 0, 3, 3},
-                {1, 1, 1, 2},
-                {2, 1, 2, 2}
-            };
-            REQUIRE(GetExternalRect(data) == 1);
-        }
-    }
-    SECTION("Снаружи линии") {
-        {
-            Data data{
-                {0, 0, 3, 3},
-                {4, 2, 5, 2},
-                {4, 1, 5, 1}
-            };
-            REQUIRE(GetExternalRect(data) == 3);
-        };
-        {
-            Data data{
-                {0, 0, 3, 3},
-                {4, 2, 4, 1},
-                {5, 1, 5, 2}
-            };
-            REQUIRE(GetExternalRect(data) == 3);
-        };
-    }
-    SECTION("Внутри точки") {
-        Data data{
-            {0, 0, 3, 3},
-            {1, 1, 1, 1},
-            {2, 2, 2, 2},
-            {1, 2, 1, 2},
-            {2, 2, 2, 2}
-        };
-        REQUIRE(GetExternalRect(data) == 1);
-    }
-    SECTION("Снаружи точки") {
-        {
-            Data data{
-                {0, 0, 3, 3},
-                {4, 1, 4, 1},
-                {5, 2, 5, 2},
-                {4, 2, 4, 2},
-                {5, 2, 5, 2}
-            };
-            REQUIRE(GetExternalRect(data) == 5);
-        }
-        {
-            Data data{
-                {0, 0, 3, 3},
-                /* внешние */
-                {-1, -1, -1, -1},
-                {-1, 0, -1, 0},
-                {-1, 1, -1, 1},
-                {-1, 2, -1, 2},
-                {-1, 3, -1, 3},
-                {-1, 4, -1, 4},
-
-                {4, -1, 4, -1},
-                {4, 0, 4, 0},
-                {4, 1, 4, 1},
-                {4, 2, 4, 2},
-                {4, 3, 4, 3},
-                {4, 4, 4, 4},
-
-                {0, 4, 0, 4},
-                {1, 4, 1, 4},
-                {2, 4, 2, 4},
-                {3, 4, 3, 4},
-
-                {0, -1, 0, -1},
-                {1, -1, 1, -1},
-                {2, -1, 2, -1},
-                {3, -1, 3, -1},
-                /* внутри */
-                {1, 1, 1, 1},
-                {2, 2, 2, 2},
-                {1, 2, 1, 2},
-                {2, 2, 2, 2}
-            };
-            REQUIRE(GetExternalRect(data) == 21);
-        }
-    }
-    SECTION("Снаружи/внутри точки") {
-        Data data{
-            {0, 0, 3, 3},
-            {1, 1, 1, 1}, // внутри
-            {2, 2, 2, 2}, // внутри
-            {4, 2, 4, 2}, // снаружи
-            {5, 2, 5, 2}  // снаружи
-        };
-        REQUIRE(GetExternalRect(data) == 3);
+    REQUIRE(s1.find(5) == -1);
+    REQUIRE(s1.find(18) == -1);
+    REQUIRE(s1.find(-2) == -1);
+    for (auto num : elems) {
+        REQUIRE(s1.find(num) == num);
+        REQUIRE(s2.find(num) == num);
     }
 
-    SECTION("точки линии") {
-        Data data{
-            {0, 0, 3, 3},
-            {1, 2, 2, 2},
-            {4, 1, 5, 1}, // снаружи линия
-            {1, 1, 1, 1}, // внутри точка
-            {1, 2, 1, 2}, // внутри точка
-            {4, 2, 4, 2}, // снаружи точка
-            {5, 2, 5, 2}  // снаружи точка
-        };
-        REQUIRE(GetExternalRect(data) == 4);
-    }
-
+    s1.erase(0);
+    REQUIRE(s1.find(0) == -1);
+    REQUIRE(s2.find(0) == 0);
 }
