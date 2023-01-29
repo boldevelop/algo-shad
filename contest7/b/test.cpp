@@ -1,5 +1,6 @@
 #include <catch.hpp>
 #include <set.h>
+#include <set>
 #include <util.h>
 
 template<class T>
@@ -123,6 +124,10 @@ TEST_CASE("set stress") {
     std::iota(data.begin(), data.end(), 1);
     RandomGenerator gen;
     gen.Shuffle(data.begin(), data.end());
+    /*
+        Create: 3182
+        Copy: 1410
+     */
     Log l;
     Set<int> set(data.begin(), data.end());
     auto dur = l.GetDuration();
@@ -136,12 +141,172 @@ TEST_CASE("set stress") {
     }
 
     {
+        auto copy = data;
+        std::sort(copy.begin(), copy.end());
         Log log;
+
         auto beg = set.begin();
+        int i = 0;
         while (beg != set.end()) {
+            REQUIRE(copy[i++] == *beg);
             ++beg;
         }
         auto dur = log.GetDuration();
         std::cout << "Iter: " << dur << std::endl;
+    }
+}
+
+TEST_CASE("set stress op") {
+    std::vector<int> data(100000);
+    std::iota(data.begin(), data.end(), 1);
+    RandomGenerator gen;
+    gen.Shuffle(data.begin(), data.end());
+
+    {
+        Set<int> set(data.begin(), data.end());
+        Log logger;
+        for (auto num : data) {
+            REQUIRE(*set.find(num) == num);
+        }
+        auto dur = logger.GetDuration();
+        /* Find: 3222
+           Find: 353 (стало)
+        */
+        std::cout << "Find: " << dur << std::endl;
+    }
+    {
+        Set<int> set;
+        std::vector<int> values;
+        for (int i = 0; i < 100'000; ++i) {
+            set.insert(i * 5);
+            values.push_back(i * 5);
+        }
+
+        Log logger;
+        for (auto num : values) {
+            REQUIRE(*set.lower_bound(num - 1) == num);
+        }
+        auto dur = logger.GetDuration();
+        /* Lower_b: 2789
+           Lower_b: 369 (стало)
+         */
+        std::cout << "Lower_b: " << dur << std::endl;
+    }
+    {
+        Set<int> set;
+        std::vector<int> values;
+        for (int i = 0; i < 200'000; ++i) {
+            set.insert(i * 5);
+            values.push_back(i * 5);
+        }
+
+        Log logger;
+        for (auto num : values) {
+            set.erase(num - 1);
+            set.erase(num);
+            set.erase(num + 1);
+            REQUIRE(set.find(num) == set.end());
+        }
+        auto dur = logger.GetDuration();
+        /* Remove: 2672
+           Remove: 667 (стало)
+         */
+        std::cout << "Remove: " << dur << std::endl;
+    }
+}
+
+
+/*
+COMAPRE std::set
+Insert: 200 3263
+ctor non sort: 205 3114
+ctor sort: 66 1290
+Iter: 57 120
+Remove: 178 963
+ */
+TEST_CASE("Compare set") {
+    std::cout << '\n' << "COMAPRE std::set" << std::endl;
+    std::vector<int> data(100'000);
+    std::iota(data.begin(), data.end(), 5);
+    RandomGenerator gen;
+    gen.Shuffle(data.begin(), data.end());
+
+    {
+        Log logger;
+        std::set<int> std_set;
+        for (auto num : data) {
+            std_set.insert(num);
+        }
+        auto dur_set = logger.GetDuration();
+
+        Log log;
+        Set<int> set;
+        for (auto num : data) {
+            set.insert(num);
+        }
+        auto dur = log.GetDuration();
+        std::cout << "Insert: " << dur_set << " " << dur << std::endl;
+    }
+    {
+        /* ctor not sorted */
+        Log logger;
+        std::set<int> std_set(data.begin(), data.end());
+        auto dur_set = logger.GetDuration();
+
+        Log log;
+        Set<int> set(data.begin(), data.end());
+        auto dur = log.GetDuration();
+        std::cout << "ctor non sort: " << dur_set << " " << dur << std::endl;
+    }
+
+    {
+        /* ctor sorted */
+        auto copy = data;
+        std::sort(copy.begin(), copy.end());
+
+        Log logger;
+        std::set<int> std_set(copy.begin(), copy.end());
+        auto dur_set = logger.GetDuration();
+
+        Log log;
+        Set<int> set(copy.begin(), copy.end());
+        auto dur = log.GetDuration();
+        std::cout << "ctor sort: " << dur_set << " " << dur << std::endl;
+
+        {
+            /* iter */
+            Log l_std_set;
+            int i = 0;
+            for (auto& elem : std_set) {
+                REQUIRE(elem == copy[i]);
+                i++;
+            }
+            auto dur_std_set = l_std_set.GetDuration();
+
+            Log l_set;
+            i = 0;
+            for (auto& elem : set) {
+                REQUIRE(elem == copy[i]);
+                i++;
+            }
+            auto dur_set = l_set.GetDuration();
+            std::cout << "Iter: " << dur_std_set << " " << dur_set << std::endl;
+        }
+
+        {
+            /* remove */
+            Log l_std_set;
+            for (auto elem : copy) {
+                std_set.erase(elem);
+            }
+            auto dur_std_set = l_std_set.GetDuration();
+
+            Log l_set;
+            for (auto elem : copy) {
+                set.erase(elem);
+            }
+            auto dur_set = l_set.GetDuration();
+            std::cout << "Remove: " << dur_std_set << " " << dur_set << std::endl;
+        }
     }
 }

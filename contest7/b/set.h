@@ -55,20 +55,34 @@ public:
     }
 
     void Remove(ValueType val) {
+        auto removable_node = Find(val);
+        if (!removable_node) {
+            return;
+        }
         auto splitted = Split(root_, val);
         root_ = Merge(splitted.left, splitted.right);
         if (splitted.elem) {
             --size_;
         }
         UpdateParent(root_);
+        return;
+
+        if (removable_node == root_) {
+            root_ = Merge(removable_node->left, removable_node->right);
+            UpdateParent(root_);
+            --size_;
+            return;
+        }
+        auto parent = removable_node->parent.lock();
+        if (parent->left == removable_node) {
+            parent->left = Merge(removable_node->left, removable_node->right);
+        } else {
+            parent->right = Merge(removable_node->left, removable_node->right);
+        }
+        UpdateParent(parent);
+        --size_;
     }
 
-    NodePtr Find(ValueType val) {
-        auto splitted = Split(root_, val);
-        root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
-        UpdateParent(root_);
-        return splitted.elem;
-    }
     NodePtr FindMin(NodePtr node = nullptr) const {
         node = node ? node : root_;
         while (node && node->left) {
@@ -84,17 +98,38 @@ public:
         return node;
     }
 
-    NodePtr LowerBound(ValueType val) {
-        NodePtr node = nullptr;
-        auto splitted = Split(root_, val);
-        if (splitted.elem) {
-            node = splitted.elem;
-        } else if (splitted.right) {
-            node = FindMin(splitted.right);
+    NodePtr Find(ValueType val) const {
+        auto node = root_;
+        while (node) {
+            if (val < node->key) {
+                node = node->left;
+                continue;
+            }
+            if (node->key < val) {
+                node = node->right;
+                continue;
+            }
+            return node;
         }
-        root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
-        UpdateParent(root_);
         return node;
+    }
+
+    NodePtr LowerBound(ValueType val) {
+        auto node = root_;
+        NodePtr nearest = nullptr;
+        while (node) {
+            if (val < node->key) {
+                nearest = node;
+                node = node->left;
+                continue;
+            }
+            if (node->key < val) {
+                node = node->right;
+                continue;
+            }
+            return node;
+        }
+        return nearest;
     }
 
     void Print() const {
@@ -117,6 +152,11 @@ public:
 
     template<class Iter>
     Treap(Iter begin, Iter end) : Treap() {
+        while (begin != end) {
+            Insert(*begin);
+            ++begin;
+        }
+        return;
         auto beg = begin;
         bool is_asc = true;
         while ((beg + 1) != end) {
@@ -128,7 +168,6 @@ public:
             break;
         }
         if (is_asc) {
-            std::cout << "here" << std::endl;
             size_ = end - begin;
             root_ = Build(begin, end);
         } else {
