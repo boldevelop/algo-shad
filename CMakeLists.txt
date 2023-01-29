@@ -21,6 +21,7 @@ function(add_task contest name)
 endfunction()
 
 add_task(2 b)
+add_task(2 e)
 
 add_task(3 a)
 add_task(3 b)

@@ -56,7 +56,6 @@ TEST_CASE("set") {
             Set<int> set(data.begin(), data.end());
             auto beg = set.begin();
             auto end = set.end();
-
             auto sorted = data;
             std::sort(sorted.begin(), sorted.end());
 
@@ -67,6 +66,11 @@ TEST_CASE("set") {
                 ++sorted_it;
             }
             if (sorted_it != sorted.end() || beg != end) {
+                for (auto num : data) {
+                    std::cout << num << " ";
+                }
+                std::cout << std::endl;
+                set.Print();
                 REQUIRE(false);
             }
         } while (std::next_permutation(data.begin(), data.end()));
@@ -223,6 +227,13 @@ ctor non sort: 205 3114
 ctor sort: 66 1290
 Iter: 57 120
 Remove: 178 963
+
+Insert: 200 1768
+ctor non sort: 208 1723
+ctor sort: 66 863
+Iter: 58 124
+Remove: 177 974
+
  */
 TEST_CASE("Compare set") {
     std::cout << '\n' << "COMAPRE std::set" << std::endl;

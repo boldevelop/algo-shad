@@ -43,17 +43,35 @@ public:
     }
 
     void Insert(ValueType val) {
-        auto splitted = Split(root_, val);
-        if (!splitted.elem) {
-            NodePtr new_node = std::make_shared<Node>(val);
-            root_ = Merge(Merge(splitted.left, new_node), splitted.right);
+        auto is_exist = Find(val);
+        if (!is_exist) {
+            root_ = Insert(root_, val);
+            UpdateParent(root_);
             ++size_;
-        } else {
-            root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
         }
-        UpdateParent(root_);
+        return;
     }
 
+    NodePtr Insert(NodePtr root, ValueType val) {
+        if (!root) {
+            return std::make_shared<Node>(val);
+        }
+
+        if (val < root->key || Equal(val, root->key)) {
+            AssignNode(root->left, Insert(root->left, val));
+            if (root->left->prior > root->prior) {
+                root = RightRotate(root);
+            }
+        } else {
+            AssignNode(root->right, Insert(root->right, val));
+            if (root->right->prior > root->prior) {
+                root = LeftRotate(root);
+            }
+        }
+        return root;
+    }
+
+    /* todo: slow remove */
     void Remove(ValueType val) {
         auto removable_node = Find(val);
         if (!removable_node) {
@@ -65,22 +83,6 @@ public:
             --size_;
         }
         UpdateParent(root_);
-        return;
-
-        if (removable_node == root_) {
-            root_ = Merge(removable_node->left, removable_node->right);
-            UpdateParent(root_);
-            --size_;
-            return;
-        }
-        auto parent = removable_node->parent.lock();
-        if (parent->left == removable_node) {
-            parent->left = Merge(removable_node->left, removable_node->right);
-        } else {
-            parent->right = Merge(removable_node->left, removable_node->right);
-        }
-        UpdateParent(parent);
-        --size_;
     }
 
     NodePtr FindMin(NodePtr node = nullptr) const {
@@ -157,28 +159,41 @@ public:
             ++begin;
         }
         return;
-        auto beg = begin;
-        bool is_asc = true;
-        while ((beg + 1) != end) {
-            if (*(beg) < *(beg + 1)) {
-                ++beg;
-                continue;
-            }
-            is_asc = false;
-            break;
-        }
-        if (is_asc) {
-            size_ = end - begin;
-            root_ = Build(begin, end);
-        } else {
-            while (begin != end) {
-                Insert(*begin);
-                ++begin;
-            }
-        }
     }
 
 private:
+    NodePtr RightRotate(NodePtr& old_root) {
+        NodePtr left = old_root->left;
+        NodePtr left_right = left->right;
+
+        left->right = old_root;
+        left->parent = old_root->parent;
+        old_root->parent = left;
+
+        old_root->left = left_right;
+        if (left_right) {
+            left_right->parent = old_root;
+        }
+
+        return left;
+    }
+
+    NodePtr LeftRotate(NodePtr& old_root) {
+        NodePtr right = old_root->right;
+        NodePtr right_left = right->left;
+
+        right->left = old_root;
+        right->parent = old_root->parent;
+        old_root->parent = right;
+
+        old_root->right = right_left;
+        if (right_left) {
+            right_left->parent = old_root;
+        }
+
+        return right;
+    }
+
     struct Splitted {
         NodePtr left;
         NodePtr elem;
@@ -222,12 +237,6 @@ private:
             return {nullptr, nullptr, nullptr};
         }
         if (Equal(node->key, val)) {
-            // if (node->left) {
-            //     node->left->parent = std::weak_ptr<Node>();
-            // }
-            // if (node->right) {
-            //     node->right->parent = std::weak_ptr<Node>();
-            // }
             Splitted splitted{node->left, node, node->right};
             splitted.elem->left = nullptr;
             splitted.elem->right = nullptr;
@@ -236,16 +245,10 @@ private:
         if (node->key < val) {
             auto splitted = Split(node->right, val);
             AssignNode(node->right, splitted.left);
-            // if (splitted.right) {
-            //     splitted.right->parent = std::weak_ptr<Node>();
-            // }
             return {node, splitted.elem, splitted.right};
         }
         auto splitted = Split(node->left, val);
         AssignNode(node->left, splitted.right);
-        // if (splitted.left) {
-        //     splitted.left->parent = std::weak_ptr<Node>();
-        // }
         return {splitted.left, splitted.elem, node};
     }
 
@@ -294,40 +297,6 @@ private:
         auto left = GetHeightImpl(node->left);
         auto right = GetHeightImpl(node->right);
         return 1 + std::max(left, right);
-    }
-
-    void Heapify(NodePtr node) {
-        if (!node) {
-            return;
-        }
-        NodePtr max_node = node;
-        if (node->left && node->left->prior > max_node->prior) {
-            // AssignNode(node->left, splitted.right);
-            max_node = node->left;
-        }
-        if (node->right && node->right->prior > max_node->prior) {
-            // AssignNode(node->left, splitted.right);
-            max_node = node->right;
-        }
-        if (max_node != node) {
-            std::swap(node->prior, max_node->prior);
-            Heapify(max_node);
-        }
-    }
-    template <class Iter>
-    NodePtr Build(Iter begin, Iter end) {
-        auto size = end - begin;
-        if (size == 0) {
-            return nullptr;
-        };
-        int mid = size / 2;
-        auto middle = begin + mid;
-        NodePtr new_node = std::make_shared<Node>(*middle);
-        new_node->left = Build(begin, middle);
-        new_node->right = Build(middle + 1, end);
-        Heapify(new_node);
-        UpdateParent(new_node);
-        return new_node;
     }
 };
 
@@ -416,10 +385,6 @@ public:
     }
     template <class Iter>
     Set(Iter begin, Iter end) : treap_(begin, end) {
-        // while (begin != end) {
-        //     insert(*begin);
-        //     begin = std::next(begin);
-        // }
     }
     explicit Set(const std::initializer_list<ValueType>& list) : Set(list.begin(), list.end()) {
     }
