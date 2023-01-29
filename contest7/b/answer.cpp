@@ -20,8 +20,12 @@ void check_constness() {
     const Set<int> s{-4, 5, 3, 0, 7};
     if (s.find(3) == s.end())
         fail("3 not found, incorrect find");
-    if (*s.lower_bound(2) != 3 || s.lower_bound(8) != s.end() || *s.lower_bound(-2) != 0)
-        fail("incorrect lower_bound");
+    if (*s.lower_bound(2) != 3)
+        fail("incorrect lower_bound 3 ");
+    if (s.lower_bound(8) != s.end())
+        fail("incorrect lower_bound 8");
+    if (*s.lower_bound(-2) != 0)
+        fail("incorrect lower_bound -2");
     if (s.empty())
         fail("incorrect empty");
     if (s.size() != 5)

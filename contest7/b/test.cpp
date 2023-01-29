@@ -117,3 +117,31 @@ TEST_CASE("set copy assign") {
     REQUIRE(s1.find(0) == s1.end());
     REQUIRE(*s2.find(0) == 0);
 }
+
+TEST_CASE("set stress") {
+    std::vector<int> data(100000);
+    std::iota(data.begin(), data.end(), 1);
+    RandomGenerator gen;
+    gen.Shuffle(data.begin(), data.end());
+    Log l;
+    Set<int> set(data.begin(), data.end());
+    auto dur = l.GetDuration();
+    std::cout << "Create: " << dur << std::endl;
+
+    {
+        Log logger;
+        Set<int> copy = set;
+        auto dur = logger.GetDuration();
+        std::cout << "Copy: " << dur << std::endl;
+    }
+
+    {
+        Log log;
+        auto beg = set.begin();
+        while (beg != set.end()) {
+            ++beg;
+        }
+        auto dur = log.GetDuration();
+        std::cout << "Iter: " << dur << std::endl;
+    }
+}

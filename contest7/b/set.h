@@ -71,53 +71,31 @@ public:
     }
     NodePtr FindMin(NodePtr node = nullptr) const {
         node = node ? node : root_;
-        while (node->left) {
+        while (node && node->left) {
             node = node->left;
         }
         return node;
     }
     NodePtr FindMax(NodePtr node = nullptr) const {
         node = node ? node : root_;
-        while (node->right) {
+        while (node && node->right) {
             node = node->right;
         }
         return node;
     }
 
     NodePtr LowerBound(ValueType val) {
+        NodePtr node = nullptr;
         auto splitted = Split(root_, val);
+        if (splitted.elem) {
+            node = splitted.elem;
+        } else if (splitted.right) {
+            node = FindMin(splitted.right);
+        }
         root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
         UpdateParent(root_);
-        if (splitted.elem) {
-            return splitted.elem;
-        }
-        if (splitted.right) {
-            auto elem = splitted.right;
-            while (elem) {
-                if (!elem->left ||
-                    (elem->left && (elem->left->key < val || Equal(elem->left->key, val)))) {
-                    break;
-                }
-                elem = elem->left;
-            }
-            return elem;
-        }
-        return nullptr;
+        return node;
     }
-
-    // NodePtr UpperBound(int val) {
-    //     auto splitted = Split(root_, val);
-    //     root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
-    //     UpdateParent(root_);
-    //     auto elem = splitted.right;
-    //     while (elem) {
-    //         if (!elem->left || (elem->left && elem->left->key < val)) {
-    //             break;
-    //         }
-    //         elem = elem->left;
-    //     }
-    //     return splitted.right;
-    // }
 
     void Print() const {
         PrintImpl(root_);
@@ -135,6 +113,30 @@ public:
     }
     bool Empty() const {
         return size_ == 0;
+    }
+
+    template<class Iter>
+    Treap(Iter begin, Iter end) : Treap() {
+        auto beg = begin;
+        bool is_asc = true;
+        while ((beg + 1) != end) {
+            if (*(beg) < *(beg + 1)) {
+                ++beg;
+                continue;
+            }
+            is_asc = false;
+            break;
+        }
+        if (is_asc) {
+            std::cout << "here" << std::endl;
+            size_ = end - begin;
+            root_ = Build(begin, end);
+        } else {
+            while (begin != end) {
+                Insert(*begin);
+                ++begin;
+            }
+        }
     }
 
 private:
@@ -254,6 +256,40 @@ private:
         auto right = GetHeightImpl(node->right);
         return 1 + std::max(left, right);
     }
+
+    void Heapify(NodePtr node) {
+        if (!node) {
+            return;
+        }
+        NodePtr max_node = node;
+        if (node->left && node->left->prior > max_node->prior) {
+            // AssignNode(node->left, splitted.right);
+            max_node = node->left;
+        }
+        if (node->right && node->right->prior > max_node->prior) {
+            // AssignNode(node->left, splitted.right);
+            max_node = node->right;
+        }
+        if (max_node != node) {
+            std::swap(node->prior, max_node->prior);
+            Heapify(max_node);
+        }
+    }
+    template <class Iter>
+    NodePtr Build(Iter begin, Iter end) {
+        auto size = end - begin;
+        if (size == 0) {
+            return nullptr;
+        };
+        int mid = size / 2;
+        auto middle = begin + mid;
+        NodePtr new_node = std::make_shared<Node>(*middle);
+        new_node->left = Build(begin, middle);
+        new_node->right = Build(middle + 1, end);
+        Heapify(new_node);
+        UpdateParent(new_node);
+        return new_node;
+    }
 };
 
 template <class ValueType>
@@ -340,13 +376,13 @@ public:
     Set() : treap_() {
     }
     template <class Iter>
-    Set(Iter begin, Iter end) : treap_() {
-        while (begin != end) {
-            insert(*begin);
-            begin = std::next(begin);
-        }
+    Set(Iter begin, Iter end) : treap_(begin, end) {
+        // while (begin != end) {
+        //     insert(*begin);
+        //     begin = std::next(begin);
+        // }
     }
-    Set(std::initializer_list<ValueType> list) : Set(list.begin(), list.end()) {
+    explicit Set(const std::initializer_list<ValueType>& list) : Set(list.begin(), list.end()) {
     }
 
     Set(const Set<ValueType>& src) {
