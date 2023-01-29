@@ -80,19 +80,19 @@ void Correctness(Set<T>& set, std::vector<T>& data) {
     for (auto num : data) {
         set.insert(num);
         REQUIRE(set.size() == 15);
-        REQUIRE(set.find(num) == num);
-        REQUIRE(set.lower_bound(num) == num);
+        REQUIRE(*set.find(num) == num);
+        REQUIRE(*set.lower_bound(num) == num);
         if (num == 1) {
-            REQUIRE(set.lower_bound(num - 1) == num);
+            REQUIRE(*set.lower_bound(num - 1) == num);
         } else {
-            REQUIRE(set.lower_bound(num - 1) == num - 1);
+            REQUIRE(*set.lower_bound(num - 1) == num - 1);
         }
     }
 
     for (auto num : data) {
-        REQUIRE(set.find(num + 15) == -1);
-        REQUIRE(set.find(num) == num);
-        REQUIRE(set.find(num - 15) == - 1);
+        REQUIRE(set.find(num + 15) == set.end());
+        REQUIRE(*set.find(num) == num);
+        REQUIRE(set.find(num - 15) == set.end());
         set.erase(num + 16);
         REQUIRE(set.size() == 15);
     }
@@ -100,7 +100,7 @@ void Correctness(Set<T>& set, std::vector<T>& data) {
     int size = 14;
     for (auto num : data) {
         set.erase(num);
-        REQUIRE(set.find(num) == -1);
+        REQUIRE(set.find(num) == set.end());
         REQUIRE(set.size() == size--);
     }
     REQUIRE(set.empty());
@@ -154,15 +154,15 @@ TEST_CASE("set copy") {
     s2.insert(-2);
 
     /* need real copy */
-    REQUIRE(s1.find(5) == -1);
-    REQUIRE(s1.find(18) == -1);
-    REQUIRE(s1.find(-2) == -1);
+    REQUIRE(s1.find(5) == s1.end());
+    REQUIRE(s1.find(18) == s1.end());
+    REQUIRE(s1.find(-2) == s1.end());
     for (auto num : elems) {
-        REQUIRE(s1.find(num) == num);
-        REQUIRE(s2.find(num) == num);
+        REQUIRE(*s1.find(num) == num);
+        REQUIRE(*s2.find(num) == num);
     }
 
     s1.erase(0);
-    REQUIRE(s1.find(0) == -1);
-    REQUIRE(s2.find(0) == 0);
+    REQUIRE(s1.find(0) == s1.end());
+    REQUIRE(*s2.find(0) == 0);
 }

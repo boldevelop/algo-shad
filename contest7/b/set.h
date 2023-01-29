@@ -17,19 +17,20 @@ int GenRandomInt() {
     return dist(gen);
 }
 
-
+template <class ValueType>
 class Treap {
     struct Node {
-        int key;
+        ValueType key;
         int prior;
         std::shared_ptr<Node> left;
         std::shared_ptr<Node> right;
         std::weak_ptr<Node> parent;
 
-        explicit Node(int added_key)
+        explicit Node(ValueType added_key)
             : key(added_key), prior(GenRandomInt()), left(nullptr), right(nullptr), parent() {
         }
     };
+
 public:
     using NodePtr = std::shared_ptr<Node>;
 
@@ -41,7 +42,7 @@ public:
     Treap() : root_(nullptr), size_(0) {
     }
 
-    void Insert(int val) {
+    void Insert(ValueType val) {
         auto splitted = Split(root_, val);
         if (!splitted.elem) {
             NodePtr new_node = std::make_shared<Node>(val);
@@ -53,7 +54,7 @@ public:
         UpdateParent(root_);
     }
 
-    void Remove(int val) {
+    void Remove(ValueType val) {
         auto splitted = Split(root_, val);
         root_ = Merge(splitted.left, splitted.right);
         if (splitted.elem) {
@@ -62,7 +63,7 @@ public:
         UpdateParent(root_);
     }
 
-    NodePtr Find(int val) {
+    NodePtr Find(ValueType val) {
         auto splitted = Split(root_, val);
         root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
         UpdateParent(root_);
@@ -83,7 +84,7 @@ public:
         return node;
     }
 
-    NodePtr LowerBound(int val) {
+    NodePtr LowerBound(ValueType val) {
         auto splitted = Split(root_, val);
         root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
         UpdateParent(root_);
@@ -93,7 +94,8 @@ public:
         if (splitted.right) {
             auto elem = splitted.right;
             while (elem) {
-                if (!elem->left || (elem->left && elem->left->key <= val)) {
+                if (!elem->left ||
+                    (elem->left && (elem->left->key < val || Equal(elem->left->key, val)))) {
                     break;
                 }
                 elem = elem->left;
@@ -103,19 +105,19 @@ public:
         return nullptr;
     }
 
-    NodePtr UpperBound(int val) {
-        auto splitted = Split(root_, val);
-        root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
-        UpdateParent(root_);
-        auto elem = splitted.right;
-        while (elem) {
-            if (!elem->left || (elem->left && elem->left->key < val)) {
-                break;
-            }
-            elem = elem->left;
-        }
-        return splitted.right;
-    }
+    // NodePtr UpperBound(int val) {
+    //     auto splitted = Split(root_, val);
+    //     root_ = Merge(Merge(splitted.left, splitted.elem), splitted.right);
+    //     UpdateParent(root_);
+    //     auto elem = splitted.right;
+    //     while (elem) {
+    //         if (!elem->left || (elem->left && elem->left->key < val)) {
+    //             break;
+    //         }
+    //         elem = elem->left;
+    //     }
+    //     return splitted.right;
+    // }
 
     void Print() const {
         PrintImpl(root_);
@@ -170,11 +172,15 @@ private:
         return right;
     }
 
-    Splitted Split(NodePtr node, int val) {
+    bool Equal(const ValueType& lhs, const ValueType& rhs) const {
+        return !(lhs < rhs) && !(rhs < lhs);
+    }
+
+    Splitted Split(NodePtr node, ValueType val) {
         if (!node) {
             return {nullptr, nullptr, nullptr};
         }
-        if (node->key == val) {
+        if (Equal(node->key, val)) {
             // if (node->left) {
             //     node->left->parent = std::weak_ptr<Node>();
             // }
@@ -250,19 +256,23 @@ private:
     }
 };
 
-template<class ValueType>
+template <class ValueType>
 class Set {
-    mutable Treap treap_;
+    mutable Treap<ValueType> treap_;
+
+    using TreeNode = typename Treap<ValueType>::NodePtr;
+    using Tree = Treap<ValueType>;
 
 public:
     class BstIterator : public std::iterator<std::bidirectional_iterator_tag, const ValueType> {
     private:
         friend class Set<ValueType>;
-        Treap::NodePtr node_;
-        const Treap* treap_;
+        TreeNode node_;
+        const Tree* treap_;
 
-        BstIterator (Treap::NodePtr node, const Treap* treap) : node_(node), treap_(treap) {
+        BstIterator(TreeNode node, Tree* treap) : node_(node), treap_(treap) {
         }
+
     public:
         BstIterator() : node_(), treap_() {
         }
@@ -275,12 +285,15 @@ public:
         const ValueType& operator*() const {
             return node_->key;
         }
+        ValueType* operator->() const {
+            return &node_->key;
+        }
         BstIterator& operator++() {
             if (node_->right) {
                 node_ = node_->right;
                 node_ = treap_->FindMin(node_);
             } else {
-                Treap::NodePtr parent = node_->parent.lock();
+                TreeNode parent = node_->parent.lock();
                 while (parent && node_ == parent->right) {
                     node_ = parent;
                     parent = parent->parent.lock();
@@ -303,11 +316,11 @@ public:
                     node_ = node_->left;
                     node_ = treap_->FindMax(node_);
                 } else {
-                    Treap::NodePtr parent;
+                    TreeNode parent;
                     parent = node_->parent.lock();
                     while (parent && node_ == parent->left) {
-                            node_ = parent;
-                            parent = parent->parent.lock();
+                        node_ = parent;
+                        parent = parent->parent.lock();
                     }
                     node_ = parent;
                 }
@@ -327,7 +340,7 @@ public:
     Set() : treap_() {
     }
 
-    template<class Iter>
+    template <class Iter>
     Set(Iter begin, Iter end) : treap_() {
         while (begin != end) {
             insert(*begin);
@@ -360,7 +373,7 @@ public:
         return BstIterator(treap_.LowerBound(elem), &treap_);
     }
 
-    void Print() {
+    void Print() const {
         treap_.Print();
         treap_.PrintData();
     }
